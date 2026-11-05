@@ -66,14 +66,17 @@ def scan():
     return candidates(json.loads(p.stdout)["blockdevices"])
 
 
-def launch(volume, inventory=scan, start=subprocess.Popen, stat_fn=os.stat):
+def launch(volume, inventory=scan, start=subprocess.Popen, stat_fn=os.stat, *, inspect=False):
     # Revalidate the same disk incarnation, volume and kernel device number
     # after any selection dialog. No mkfs/format command runs in this helper.
     if volume not in inventory(): raise ValueError("That drive changed or was removed. Open the chooser again.")
     st=stat_fn(volume.path)
     if not stat.S_ISBLK(st.st_mode) or f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"!=volume.devno:
         raise ValueError("The selected device is no longer available.")
-    start(["gnome-disks","--block-device",volume.path,"--format-device"],start_new_session=True)
+    command = ["gnome-disks", "--block-device", volume.path]
+    if not inspect:
+        command.append("--format-device")
+    start(command, start_new_session=True)
 
 
 def watch():
@@ -118,9 +121,18 @@ def main():
     arg.add_argument("--identify", metavar="DEVICE")
     arg.add_argument("--device", metavar="DEVICE")
     arg.add_argument("--token")
+    arg.add_argument("--inspect", action="store_true")
+    arg.add_argument("--unrecognized", action="store_true")
     a=arg.parse_args()
     if a.watch:watch();return
     choices=scan()
+    if a.unrecognized:
+        print(json.dumps([{"title": f"{v.size / 2**30:.1f} GiB · {v.path}",
+                          "path": v.path, "token": fingerprint(v)}
+                         for v in choices if not v.fs]))
+        return
+    if a.inspect and not a.device:
+        arg.error("--inspect requires a selected device")
     if a.identify:
         for v in choices:
             if v.path == a.identify:
@@ -128,7 +140,7 @@ def main():
                 break
         return
     if a.device:
-        launch(selected_volume(a.device,a.token,choices))
+        launch(selected_volume(a.device,a.token,choices), inspect=a.inspect)
         return
     if a.list:
         for v in choices:print(v.title())
@@ -146,6 +158,6 @@ def main():
 if __name__=="__main__":
     try:main()
     except (OSError,ValueError,subprocess.SubprocessError) as e:
-        if "--watch" not in sys.argv and "--list" not in sys.argv and "--identify" not in sys.argv:
+        if "--watch" not in sys.argv and "--list" not in sys.argv and "--identify" not in sys.argv and "--unrecognized" not in sys.argv:
             subprocess.run(["kdialog","--error",str(e)])
         sys.exit(1)

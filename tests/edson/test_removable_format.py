@@ -43,3 +43,7 @@ for target,cookie,choices in [(v.path,"",valid),(valid[1].path,token,valid),(v.p
     except ValueError:pass
     else:raise AssertionError("Substituted or missing volume accepted")
 print("PASS: Places action validates the device path and incarnation token")
+
+launch(v,lambda:valid,start,st,inspect=True)
+assert started[-1] == ["gnome-disks", "--block-device", v.path]
+print("PASS: inspecting a volume opens its details without starting the format dialog")
