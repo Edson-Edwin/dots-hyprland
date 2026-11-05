@@ -20,6 +20,10 @@ case "${SKIP_MISCCONF}" in
     # Seed the optional translation without replacing settings or existing translations.
     rsync_dir__ignore_existing "dots/.config/illogical-impulse/translations" "$XDG_CONFIG_HOME/illogical-impulse/translations"
     rsync_dir "dots/.local/share/kio/servicemenus" "$XDG_DATA_HOME/kio/servicemenus"
+    install_file "dots/.local/bin/ii-dolphin" "$HOME/.local/bin/ii-dolphin"
+    install_file "dots/.local/bin/ii-display-settings" "$HOME/.local/bin/ii-display-settings"
+    install_file "dots/.local/share/applications/org.kde.dolphin.desktop" "$XDG_DATA_HOME/applications/org.kde.dolphin.desktop"
+    install_file "dots/.local/share/applications/nwg-displays.desktop" "$XDG_DATA_HOME/applications/nwg-displays.desktop"
     install_file "dots/.local/bin/ii-desktop-recovery" "$HOME/.local/bin/ii-desktop-recovery"
     install_file "dots/.local/share/applications/ii-desktop-recovery.desktop" "$XDG_DATA_HOME/applications/ii-desktop-recovery.desktop"
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole

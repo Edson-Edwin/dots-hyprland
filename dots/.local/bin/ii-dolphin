@@ -1,0 +1,10 @@
+#!/bin/sh
+if ! test -x /usr/bin/dolphin; then
+    exec "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland/scripts/launch_first_available.sh" 'nautilus' 'nemo' 'thunar' 'kitty -1 fish -c yazi'
+fi
+plugins="$HOME/.local/lib/ii-dolphin-plugins"
+if test -r "$plugins/generic/libii-places-format.so"; then
+    export QT_PLUGIN_PATH="$plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
+    exec /usr/bin/dolphin -plugin ii-places-format "$@"
+fi
+exec /usr/bin/dolphin "$@"

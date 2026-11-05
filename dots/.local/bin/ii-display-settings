@@ -1,0 +1,89 @@
+#!/usr/bin/python3
+"""Launch nwg-displays with a presentation control on Hyprland."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+from nwg_displays import main as settings
+
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+SCRIPTS = CONFIG / "hypr/hyprland/scripts/edson"
+
+
+def add_control():
+    apply_button = getattr(settings, "form_apply", None)
+    if not apply_button or not os.getenv("HYPRLAND_INSTANCE_SIGNATURE"):
+        return False
+
+    window = apply_button.get_toplevel()
+    container = window.get_child()
+    if not isinstance(container, Gtk.Box):
+        return False
+    if container.get_orientation() != Gtk.Orientation.VERTICAL:
+        container = next((child for child in container.get_children()
+                          if isinstance(child, Gtk.Box)
+                          and child.get_orientation() == Gtk.Orientation.VERTICAL), None)
+        if container is None:
+            return False
+
+    row = Gtk.Box(spacing=10)
+    row.set_margin_start(12)
+    row.set_margin_end(12)
+    row.set_margin_top(6)
+    row.set_margin_bottom(6)
+    row.pack_start(Gtk.Label(label="Presentation", xalign=0), False, False, 0)
+    description = Gtk.Label(label="Fill an external screen with your laptop desktop.", xalign=0)
+    description.set_line_wrap(True)
+    row.pack_start(description, True, True, 0)
+    button = Gtk.Button(label="Present laptop screen")
+    row.pack_end(button, False, False, 0)
+
+    def refresh(*_):
+        if button.get_sensitive():
+            try:
+                status = subprocess.run(
+                    ["qs", "-p", str(SCRIPTS / "projector"), "ipc", "call", "projector", "status"],
+                    capture_output=True, timeout=1,
+                )
+                presenting = status.returncode == 0
+            except (OSError, subprocess.SubprocessError):
+                presenting = False
+            button.set_label("Stop presenting" if presenting else "Present laptop screen")
+        return False
+
+    def finished(pid, _status):
+        GLib.spawn_close_pid(pid)
+        button.set_sensitive(True)
+        refresh()
+
+    def toggle(*_):
+        try:
+            pid, *_pipes = GLib.spawn_async(
+                [sys.executable, str(SCRIPTS / "mirror-fit.py")],
+                flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD,
+            )
+        except GLib.Error as error:
+            message = Gtk.MessageDialog(transient_for=window, message_type=Gtk.MessageType.ERROR,
+                                        buttons=Gtk.ButtonsType.CLOSE, text=error.message)
+            message.connect("response", lambda dialog, _: dialog.destroy())
+            message.show()
+            return
+        button.set_sensitive(False)
+        GLib.child_watch_add(GLib.PRIORITY_DEFAULT, pid, finished)
+
+    button.connect("clicked", toggle)
+    container.pack_start(row, False, False, 0)
+    container.reorder_child(row, 0)
+    row.show_all()
+    window.connect("focus-in-event", refresh)
+    return refresh()
+
+
+if __name__ == "__main__":
+    GLib.idle_add(add_control)
+    settings.main()

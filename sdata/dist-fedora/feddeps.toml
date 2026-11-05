@@ -192,6 +192,11 @@ packages = [
 # Widgets
 [groups.widgets]
 packages = [
+  "qt6-qtbase-devel",
+  "kf6-kio-devel",
+  "kf6-solid-devel",
+  "gcc-c++",
+  "nwg-displays",
   "gtk-layer-shell",
   "python3-gobject",
   "python3-cairo",

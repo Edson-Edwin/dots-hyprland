@@ -34,3 +34,12 @@ for inv,stfn in [(lambda:[],st),(lambda:candidates([disk(children=[part(1)])],la
     else:raise AssertionError("Unsafe wizard launch")
 assert len(started)==1
 print("PASS: USB/SD eligibility, volume scope, system/locked/read-only exclusions and device replacement guard")
+
+# The Dolphin action must bind the originally clicked volume, never substitute another.
+token=mod['fingerprint'](v)
+assert mod['selected_volume'](v.path,token,valid)==v
+for target,cookie,choices in [(v.path,"",valid),(valid[1].path,token,valid),(v.path,token,[])]:
+    try:mod['selected_volume'](target,cookie,choices)
+    except ValueError:pass
+    else:raise AssertionError("Substituted or missing volume accepted")
+print("PASS: Places action validates the device path and incarnation token")

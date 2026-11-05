@@ -230,6 +230,12 @@ fi
 
 #####################################################################################
 
+# Build the optional native Dolphin Places hook after copying the managed files.
+places_build="$XDG_CONFIG_HOME/hypr/hyprland/scripts/edson/dolphin-format/build.sh"
+if [[ "$SKIP_HYPRLAND" != true && -x "$places_build" ]] && command -v qtpaths6 >/dev/null && [[ -f /usr/include/KF6/KIOFileWidgets/KFilePlacesModel ]]; then
+    bash "$places_build" || printf '%s\n' "Dolphin Format plugin build failed; the sidebar formatter is still available." >&2
+fi
+
 v gen_firstrun
 v dedup_and_sort_listfile "${INSTALLED_LISTFILE}" "${INSTALLED_LISTFILE}"
 

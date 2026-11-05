@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Offer the system's interactive format wizard for eligible removable volumes."""
 import argparse
-from dataclasses import dataclass
+import hashlib
+from dataclasses import dataclass, astuple
 import json
 import os
 from pathlib import Path
@@ -99,13 +100,36 @@ def watch():
     report();GLib.MainLoop().run()
 
 
+def fingerprint(volume):
+    return hashlib.sha256(json.dumps(astuple(volume), ensure_ascii=True).encode()).hexdigest()
+
+
+def selected_volume(path, token, volumes):
+    for volume in volumes:
+        if volume.path == path and fingerprint(volume) == token:
+            return volume
+    raise ValueError("This volume changed, was removed, or is not eligible. Right-click it again.")
+
+
 def main():
     arg=argparse.ArgumentParser()
     arg.add_argument("--watch",action="store_true")
     arg.add_argument("--list",action="store_true")
+    arg.add_argument("--identify", metavar="DEVICE")
+    arg.add_argument("--device", metavar="DEVICE")
+    arg.add_argument("--token")
     a=arg.parse_args()
     if a.watch:watch();return
     choices=scan()
+    if a.identify:
+        for v in choices:
+            if v.path == a.identify:
+                print(fingerprint(v))
+                break
+        return
+    if a.device:
+        launch(selected_volume(a.device,a.token,choices))
+        return
     if a.list:
         for v in choices:print(v.title())
         return
@@ -122,6 +146,6 @@ def main():
 if __name__=="__main__":
     try:main()
     except (OSError,ValueError,subprocess.SubprocessError) as e:
-        if "--watch" not in sys.argv and "--list" not in sys.argv:
+        if "--watch" not in sys.argv and "--list" not in sys.argv and "--identify" not in sys.argv:
             subprocess.run(["kdialog","--error",str(e)])
         sys.exit(1)
