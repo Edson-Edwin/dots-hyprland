@@ -196,6 +196,7 @@ packages = [
   "kf6-kio-devel",
   "kf6-solid-devel",
   "gcc-c++",
+  "rust",
   "nwg-displays",
   "gtk-layer-shell",
   "python3-gobject",

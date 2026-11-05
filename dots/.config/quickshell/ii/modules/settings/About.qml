@@ -7,6 +7,9 @@ import qs.modules.common
 import qs.modules.common.widgets
 
 ContentPage {
+    id: page
+    readonly property string repositoryName: "Edson-Edwin/dots-hyprland"
+    readonly property string repositoryUrl: "https://github.com/" + repositoryName
     forceWidth: true
 
     ContentSection {
@@ -89,17 +92,17 @@ ContentPage {
             Layout.bottomMargin: 10
             IconImage {
                 implicitSize: 80
-                source: Quickshell.iconPath("illogical-impulse")
+                source: Quickshell.iconPath("folder")
             }
             ColumnLayout {
                 Layout.alignment: Qt.AlignVCenter
                 // spacing: 10
                 StyledText {
-                    text: Translation.tr("illogical-impulse")
+                    text: page.repositoryName
                     font.pixelSize: Appearance.font.pixelSize.title
                 }
                 StyledText {
-                    text: "https://github.com/end-4/dots-hyprland"
+                    text: "[" + page.repositoryUrl + "](" + page.repositoryUrl + ")"
                     font.pixelSize: Appearance.font.pixelSize.normal
                     textFormat: Text.MarkdownText
                     onLinkActivated: (link) => {
@@ -118,33 +121,9 @@ ContentPage {
                 materialIcon: "auto_stories"
                 mainText: Translation.tr("Documentation")
                 onClicked: {
-                    Qt.openUrlExternally("https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/02usage/")
+                    Qt.openUrlExternally(page.repositoryUrl + "/blob/main/EDSON.md")
                 }
             }
-            RippleButtonWithIcon {
-                materialIcon: "adjust"
-                materialIconFill: false
-                mainText: Translation.tr("Issues")
-                onClicked: {
-                    Qt.openUrlExternally("https://github.com/end-4/dots-hyprland/issues")
-                }
-            }
-            RippleButtonWithIcon {
-                materialIcon: "forum"
-                mainText: Translation.tr("Discussions")
-                onClicked: {
-                    Qt.openUrlExternally("https://github.com/end-4/dots-hyprland/discussions")
-                }
-            }
-            RippleButtonWithIcon {
-                materialIcon: "favorite"
-                mainText: Translation.tr("Donate")
-                onClicked: {
-                    Qt.openUrlExternally("https://github.com/sponsors/end-4")
-                }
-            }
-
-            
         }
     }
 }

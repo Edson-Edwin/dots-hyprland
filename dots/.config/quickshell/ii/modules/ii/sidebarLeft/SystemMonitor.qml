@@ -13,7 +13,24 @@ Item {
     property bool sortMemory: false
     property string query: ""
     property var stats: ({})
+    property var detail: ({})
+    property int generation: 0
+    function pageName() { return ["overview","processes","ports"][page]; }
     property string error: ""
+    function requestPage() {
+        ++generation;
+        detail = {};
+        if (active && collector.running) collector.write(pageName()+" "+generation+"\n");
+    }
+    onPageChanged: requestPage()
+    function focusPressure(resource) {
+        page=0;
+        search.clear();
+        Qt.callLater(() => {
+            const target = resource==="memory" ? memoryGraph : resource==="io" ? diskGraph : cpuGraph;
+            overview.contentY = Math.max(0,Math.min(target.mapToItem(overview.contentItem,0,0).y,overview.contentHeight-overview.height));
+        });
+    }
     property var cpuHistory: []
     property var ramHistory: []
     property var swapHistory: []
@@ -23,10 +40,10 @@ Item {
     property var writeHistory: []
     readonly property var processRows: {
         const q=query.toLowerCase();
-        return (stats.processes ?? []).filter(p => !q || p.name.toLowerCase().includes(q) || String(p.pid).includes(q))
+        return (page===1 ? detail.processes ?? [] : []).filter(p => !q || p.name.toLowerCase().includes(q) || String(p.pid).includes(q))
             .sort((a,b) => sortMemory ? b.rss-a.rss : b.cpu-a.cpu || b.rss-a.rss).slice(0,60);
     }
-    readonly property var portRows: (stats.ports ?? []).filter(p => !query || (p.address+" "+p.owner+" "+p.protocol).toLowerCase().includes(query.toLowerCase()))
+    readonly property var portRows: (page===2 ? detail.ports ?? [] : []).filter(p => !query || (p.address+" "+p.owner+" "+p.protocol).toLowerCase().includes(query.toLowerCase()))
     function bytes(v) {
         v=Number(v)||0;
         const units=["B","KiB","MiB","GiB","TiB"];let i=0;
@@ -39,6 +56,10 @@ Item {
     function receive(text) {
         try {
             const next=JSON.parse(text);
+            if (next.page !== undefined) {
+                if (active && next.page===pageName() && next.generation===generation) detail=next;
+                return;
+            }
             if (next.error) { error=next.error;return; }
             stats=next;error="";
             cpuHistory=history(cpuHistory,next.cpu);ramHistory=history(ramHistory,next.ram_percent);swapHistory=history(swapHistory,next.swap_percent);
@@ -47,6 +68,7 @@ Item {
         } catch (_) { error="Unable to read system metrics"; }
     }
     onActiveChanged: {
+        detail={};
         if (active) {
             cpuHistory=[];ramHistory=[];swapHistory=[];rxHistory=[];txHistory=[];readHistory=[];writeHistory=[];
             error="";
@@ -54,7 +76,9 @@ Item {
     }
     Process {
         id: collector
-        command: ["/usr/bin/python3", "-u", Quickshell.shellPath("scripts/system-monitor/collect.py")]
+        command: ["/usr/bin/python3", "-u", Quickshell.shellPath("scripts/system-monitor/collect.py"), "--interactive"]
+        stdinEnabled: true
+        onStarted: root.requestPage()
         running: root.active
         stdout: SplitParser { onRead: data => root.receive(data) }
         stderr: StdioCollector {}
@@ -116,10 +140,10 @@ Item {
             clip: true;contentHeight: overviewColumn.implicitHeight
             ColumnLayout {
                 id: overviewColumn;width: overview.width;spacing: 10
-                MonitorMetric { Layout.fillWidth: true; title: "CPU ACTIVITY";value: root.percent(root.stats.cpu);detail: "Load average  "+(root.stats.load ?? []).map(v => v.toFixed(2)).join("  ·  ");history: root.cpuHistory;implicitHeight: 155 }
+                MonitorMetric { id: cpuGraph; Layout.fillWidth: true; title: "CPU ACTIVITY";value: root.percent(root.stats.cpu);detail: "Load average  "+(root.stats.load ?? []).map(v => v.toFixed(2)).join("  ·  ");history: root.cpuHistory;implicitHeight: 155 }
                 GridLayout {
                     Layout.fillWidth: true;columns: 2;columnSpacing: 10
-                    MonitorMetric { Layout.fillWidth: true;title: "MEMORY";value: root.percent(root.stats.ram_percent);detail: root.bytes(root.stats.ram_used)+" / "+root.bytes(root.stats.ram_total);history: root.ramHistory;accent: Appearance.colors.colSecondary }
+                    MonitorMetric { id: memoryGraph; Layout.fillWidth: true;title: "MEMORY";value: root.percent(root.stats.ram_percent);detail: root.bytes(root.stats.ram_used)+" / "+root.bytes(root.stats.ram_total);history: root.ramHistory;accent: Appearance.colors.colSecondary }
                     MonitorMetric { Layout.fillWidth: true;title: "SWAP";value: root.percent(root.stats.swap_percent);detail: root.bytes(root.stats.swap_used)+" / "+root.bytes(root.stats.swap_total);history: root.swapHistory;accent: Appearance.colors.colTertiary }
                 }
                 Label { Layout.fillWidth: true;wrapMode: Text.Wrap;text: "Available "+root.bytes(root.stats.ram_available)+" · Cache "+root.bytes(root.stats.ram_cache)+"\nCompressed swap occupies "+root.bytes(root.stats.zram)+" RAM";font.pixelSize: 11 }
@@ -152,6 +176,7 @@ Item {
                     }
                 }
                 Panel {
+                    id: diskGraph
                     implicitHeight: 148
                     ColumnLayout {
                         anchors.fill: parent;anchors.margins: 14;spacing: 6
@@ -207,7 +232,7 @@ Item {
                     }
                 }
             }
-            Label { anchors.centerIn: parent;visible: parent.count===0;text: "No matching processes" }
+            Label { anchors.centerIn: parent;visible: parent.count===0;text: root.detail.detail_error || (root.detail.processes ? "No matching processes" : "Reading processes…") }
         }
         ListView {
             visible: root.page===2;Layout.fillWidth: true;Layout.fillHeight: true;clip: true;spacing: 6
@@ -225,7 +250,7 @@ Item {
                     Label { text: modelData.owner;Layout.fillWidth: true;elide: Text.ElideRight;font.pixelSize: 11 }
                 }
             }
-            Label { anchors.centerIn: parent;visible: parent.count===0;text: root.stats.port_error || "No matching listening sockets";width: parent.width;wrapMode: Text.Wrap;horizontalAlignment: Text.AlignHCenter }
+            Label { anchors.centerIn: parent;visible: parent.count===0;text: root.detail.detail_error || root.detail.port_error || (root.detail.ports ? "No matching listening sockets" : "Reading sockets…");width: parent.width;wrapMode: Text.Wrap;horizontalAlignment: Text.AlignHCenter }
         }
     }
 }

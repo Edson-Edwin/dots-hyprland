@@ -30,6 +30,18 @@ Scope {
             component: PanelWindow { // Bar window
                 id: barRoot
                 screen: barLoader.modelData
+                // Unmap the layer (and its reserved space) only on this visible workspace.
+                readonly property bool fullscreenHere: {
+                    const name = barLoader.modelData.name;
+                    if (Hyprland.workspaces.values.some(ws => ws.active && ws.monitor?.name === name &&
+                            ws.toplevels.values.some(top => top.wayland?.fullscreen))) return true;
+                    const monitor = HyprlandData.monitors.find(m => m.name === name);
+                    if (!monitor) return false;
+                    const workspace = monitor.specialWorkspace?.id || monitor.activeWorkspace?.id;
+                    return HyprlandData.windowList.some(w => w.monitor === monitor.id && w.workspace?.id === workspace &&
+                        w.mapped && !w.hidden && ((w.fullscreen | w.fullscreenClient) & 2) !== 0);
+                }
+                visible: !fullscreenHere
 
                 Timer {
                     id: showBarTimer

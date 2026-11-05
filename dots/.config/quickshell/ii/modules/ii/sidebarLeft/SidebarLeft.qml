@@ -15,6 +15,22 @@ Scope { // Scope
     property Component contentComponent: SidebarLeftContent {}
     property Item sidebarContent
 
+    property string pendingPressure: ""
+    function focusPendingPressure() {
+        if (sidebarContent && pendingPressure) {
+            sidebarContent.focusPressure(pendingPressure);
+            pendingPressure = "";
+        }
+    }
+    Connections {
+        target: GlobalStates
+        function onPressureMonitorRequested(resource) {
+            root.pendingPressure = resource;
+            root.openSidebar();
+            root.focusPendingPressure();
+        }
+    }
+
     function openSidebar() {
         // Normal open actions always restore the left-edge layer panel.
         root.detach = false;
@@ -72,15 +88,20 @@ Scope { // Scope
         else root.pin = !root.pin;
     }
 
-    Component.onCompleted: {
-        root.sidebarContent = contentComponent.createObject(null, {
-            "scopeRoot": root,
-        });
-        sidebarLoader.item.contentParent.children = [root.sidebarContent];
+    Item { id: contentOwner }
+
+    function ensureContent(parentItem) {
+        if (parentItem && !root.sidebarContent) {
+            // Own the content at shell scope so it survives a detach or reattach.
+            root.sidebarContent = contentComponent.createObject(contentOwner, { scopeRoot: root });
+            root.sidebarContent.parent = parentItem;
+            root.focusPendingPressure();
+        }
     }
 
     onDetachChanged: {
         if (root.detach) {
+            ensureContent(sidebarLoader.item.contentParent);
             GlobalFocusGrab.removeDismissable(sidebarLoader.item) // Remove sidebar from the focus grab system
             sidebarContent.parent = null; // Detach content from sidebar
             sidebarLoader.active = false; // Unload sidebar
@@ -128,8 +149,10 @@ Scope { // Scope
                 item: sidebarLeftBackground
             }
 
+            Component.onCompleted: if (visible) root.ensureContent(panelWindow.contentParent)
             onVisibleChanged: {
                 if (visible) {
+                    root.ensureContent(panelWindow.contentParent);
                     GlobalFocusGrab.addDismissable(panelWindow);
                 } else {
                     GlobalFocusGrab.removeDismissable(panelWindow);
@@ -216,6 +239,10 @@ Scope { // Scope
 
     IpcHandler {
         target: "sidebarLeft"
+
+        function pressure(resource: string): void {
+            if (["cpu","memory","io"].includes(resource)) GlobalStates.pressureMonitorRequested(resource);
+        }
 
         function toggle(): void {
             root.toggleSidebar()

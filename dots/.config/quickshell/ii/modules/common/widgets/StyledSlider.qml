@@ -157,7 +157,8 @@ Slider {
                         function onHighlightColorChanged() { wavyFill.requestPaint(); }
                     }
                     FrameAnimation {
-                        running: root.animateWave
+                        running: root.animateWave && wavyFill.visible && wavyFill.width > 0
+                                     && (wavyFill.Window.window?.visible ?? false)
                         onTriggered: {
                             wavyFill.requestPaint()
                         }

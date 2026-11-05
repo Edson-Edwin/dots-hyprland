@@ -20,6 +20,15 @@ Singleton {
 	property real swapUsed: swapTotal - swapFree
     property real swapUsedPercentage: swapTotal > 0 ? (swapUsed / swapTotal) : 0
     property real cpuUsage: 0
+    property string pressureResource: ""
+    property real pressurePercent: 0
+    function updatePressure(cpu, memory, io) {
+        const values = [cpu, memory, io].map(s => Number((s ?? "").match(/^some\s+avg10=([0-9.]+)/m)?.[1]) || 0);
+        const highest = Math.max(...values);
+        pressurePercent = highest;
+        pressureResource = highest >= (pressureResource ? 5 : 10)
+            ? ["cpu","memory","io"][values.indexOf(highest)] : "";
+    }
     property var previousCpuStats
 
     property string maxAvailableMemoryString: kbToGbString(ResourceUsage.memoryTotal)
@@ -67,6 +76,8 @@ Singleton {
             // Reload files
             fileMeminfo.reload()
             fileStat.reload()
+            for (const file of [psiCpu, psiMemory, psiIo]) file.reload()
+            root.updatePressure(psiCpu.text(), psiMemory.text(), psiIo.text())
 
             // Parse memory and swap usage
             const textMeminfo = fileMeminfo.text()
@@ -98,6 +109,9 @@ Singleton {
 	}
 
 	FileView { id: fileMeminfo; path: "/proc/meminfo" }
+    FileView { id: psiCpu; path: "/proc/pressure/cpu"; printErrors: false }
+    FileView { id: psiMemory; path: "/proc/pressure/memory"; printErrors: false }
+    FileView { id: psiIo; path: "/proc/pressure/io"; printErrors: false }
     FileView { id: fileStat; path: "/proc/stat" }
 
     Process {

@@ -23,6 +23,11 @@ Item {
     ]
     property int tabCount: swipeView.count
 
+    function focusPressure(resource) {
+        tabBar.setCurrentIndex(0);
+        swipeView.itemAt(0).focusPressure(resource);
+    }
+
     function focusActiveItem() {
         if (swipeView.currentItem) swipeView.currentItem.forceActiveFocus()
     }

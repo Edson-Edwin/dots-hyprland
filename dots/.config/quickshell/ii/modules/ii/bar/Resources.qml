@@ -1,4 +1,7 @@
+import qs
 import qs.modules.common
+import qs.modules.common.widgets
+import QtQuick.Controls
 import qs.services
 import QtQuick
 import QtQuick.Layouts
@@ -18,6 +21,27 @@ MouseArea {
         anchors.fill: parent
         anchors.leftMargin: 4
         anchors.rightMargin: 4
+
+        MouseArea {
+            visible: ResourceUsage.pressureResource !== ""
+            implicitWidth: 24
+            implicitHeight: root.implicitHeight
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            readonly property string description: ({"cpu":"CPU","memory":"Memory","io":"Disk I/O"}[ResourceUsage.pressureResource] ?? "")+" pressure · "+Math.round(ResourceUsage.pressurePercent)+"%"
+            Accessible.role: Accessible.Button
+            Accessible.name: description
+            Accessible.onPressAction: GlobalStates.pressureMonitorRequested(ResourceUsage.pressureResource)
+            ToolTip.visible: containsMouse
+            ToolTip.text: description
+            MaterialSymbol {
+                anchors.centerIn: parent
+                text: "monitor_heart"
+                iconSize: Appearance.font.pixelSize.normal
+                color: Appearance.barForeground(Appearance.colors.colError)
+            }
+            onClicked: GlobalStates.pressureMonitorRequested(ResourceUsage.pressureResource)
+        }
 
         Resource {
             iconName: "memory"

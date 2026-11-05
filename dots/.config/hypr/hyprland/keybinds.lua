@@ -191,7 +191,19 @@ hl.bind("SUPER + D", hl.dsp.window.fullscreen({ mode = "maximized", action = "to
     { description = "Window: Maximize" })
 hl.bind("SUPER + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }),
     { description = "Window: Fullscreen" })
-hl.bind("SUPER + ALT + F", hl.dsp.window.fullscreen_state({ internal = 0, client = 3, action = "toggle" }),
+-- Allow Zen to honor the next video fullscreen request even after window-only fullscreen.
+local function toggleWindowOnlyFullscreen()
+    local window = hl.get_active_window()
+    if not window then return end
+    local zen = window.class == "app.zen_browser.zen" or window.class == "zen"
+    hl.dispatch(hl.dsp.window.fullscreen_state({
+        window = window, internal = 0, client = zen and 2 or 3, action = "toggle",
+    }))
+    if zen then
+        hl.dispatch(hl.dsp.window.set_prop({window = window, prop = "sync_fullscreen", value = "on"}))
+    end
+end
+hl.bind("SUPER + ALT + F", toggleWindowOnlyFullscreen,
     { description = "Window: Fullscreen spoof" })
 hl.bind("SUPER + P", hl.dsp.window.pin(), { description = "Window: Pin" })
 

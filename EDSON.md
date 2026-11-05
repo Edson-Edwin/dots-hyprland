@@ -96,3 +96,15 @@ for t in tests/edson/test_*.py; do /usr/bin/python3 "$t" || exit 1; done
 ```
 
 In **Displays Settings** (nwg-displays from your app menu), click **Present laptop screen**, then **Stop presenting** to return. This uses the same projector as the shortcut and does not require clicking Apply. Connecting a screen leaves it extended. **Super+Alt+P** starts a fullscreen, view-only projector on the external output. Keep working on the laptop. The entire source frame, including its pointer, fills the target without cropping; different aspect ratios stretch the image slightly. The external desktop stays underneath and returns when you stop. Unplugging the target closes the projector. Use this shortcut instead of the native monitor settings’ aspect-preserving Mirror option.
+
+Super+B → System samples overview graphs every two seconds. Opening Processes
+starts a local Rust snapshot immediately and refreshes it every six seconds.
+Ports runs `ss` on the same schedule only while that tab is selected. Leaving
+System or closing the sidebar stops its collector. The bar uses its ordinary
+resource refresh to check Linux CPU, memory, and I/O pressure. A themed pulse
+icon appears at 10% stalled time (10-second average) and clears below 5%.
+Click it to open the corresponding Overview chart.
+
+The installer builds the dependency-free scanner with `rustc`; without it,
+Processes uses psutil. To rebuild after installing Rust, run
+`bash "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/ii/scripts/system-monitor/build.sh"`.

@@ -26,14 +26,23 @@ Singleton {
     property string uptime: "0h, 0m"
 
     Timer {
-        interval: 10
-        running: true
-        repeat: true
-        onTriggered: {
-            fileUptime.reload();
-            const textUptime = fileUptime.text();
-            const uptimeSeconds = Number(textUptime.split(" ")[0] ?? 0);
+        id: uptimeTimer
+        interval: 60000
+        onTriggered: fileUptime.reload()
+    }
 
+    FileView {
+        id: fileUptime
+        path: "/proc/uptime"
+        preload: true
+        onLoadFailed: uptimeTimer.restart()
+        onLoaded: {
+            const uptimeSeconds = parseFloat(text());
+            if (!Number.isFinite(uptimeSeconds) || uptimeSeconds < 0) {
+                uptimeTimer.interval = 3000;
+                uptimeTimer.restart();
+                return;
+            }
             // Convert seconds to days, hours, and minutes
             const days = Math.floor(uptimeSeconds / 86400);
             const hours = Math.floor((uptimeSeconds % 86400) / 3600);
@@ -48,13 +57,9 @@ Singleton {
             if (minutes > 0 || !formatted)
                 formatted += `${formatted ? ", " : ""}${minutes}m`;
             uptime = formatted;
-            interval = Config.options?.resources?.updateInterval ?? 3000;
+
+            uptimeTimer.interval = Math.max(1, Math.ceil((60 - uptimeSeconds % 60) * 1000));
+            uptimeTimer.restart();
         }
-    }
-
-    FileView {
-        id: fileUptime
-
-        path: "/proc/uptime"
     }
 }

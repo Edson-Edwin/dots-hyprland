@@ -230,6 +230,16 @@ fi
 
 #####################################################################################
 
+# The monitor scanner has no crates and is never run by the bar or Overview.
+monitor_build="$XDG_CONFIG_HOME/quickshell/ii/scripts/system-monitor/build.sh"
+if [[ "$SKIP_QUICKSHELL" != true && -f "$monitor_build" ]]; then
+    if command -v rustc >/dev/null; then
+        bash "$monitor_build" || printf '%s\n' "Process scanner build failed; the monitor can use psutil." >&2
+    else
+        printf '%s\n' "rustc not found; using psutil on the Processes tab." >&2
+    fi
+fi
+
 # Build the optional native Dolphin Places hook after copying the managed files.
 places_build="$XDG_CONFIG_HOME/hypr/hyprland/scripts/edson/dolphin-format/build.sh"
 if [[ "$SKIP_HYPRLAND" != true && -x "$places_build" ]] && command -v qtpaths6 >/dev/null && [[ -f /usr/include/KF6/KIOFileWidgets/KFilePlacesModel ]]; then
