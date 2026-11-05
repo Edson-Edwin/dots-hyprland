@@ -47,3 +47,20 @@ print("PASS: Places action validates the device path and incarnation token")
 launch(v,lambda:valid,start,st,inspect=True)
 assert started[-1] == ["gnome-disks", "--block-device", v.path]
 print("PASS: inspecting a volume opens its details without starting the format dialog")
+
+empty_disk = disk(pttype="dos")
+assert not candidates([empty_disk], attrs)
+blank, = candidates([empty_disk], attrs, include_empty_tables=True)
+assert blank.empty_table and blank.path == "/dev/sdb"
+assert not candidates([disk("nvme0n1", tran="nvme", pttype="gpt")], attrs, include_empty_tables=True)
+assert not candidates([disk(pttype="gpt", mountpoints=["/"])], attrs, include_empty_tables=True)
+whole_stat = lambda _: SimpleNamespace(st_mode=stat.S_IFBLK, st_rdev=os.makedev(8,16))
+launch(blank, lambda: [blank], start, whole_stat, inspect=True)
+assert started[-1] == ["gnome-disks", "--block-device", blank.path]
+try:
+    launch(blank, lambda: [blank], start, whole_stat)
+except ValueError:
+    pass
+else:
+    raise AssertionError("Empty partition table offered as a formattable volume")
+print("PASS: empty USB partition table can be inspected, never formatted as a volume")

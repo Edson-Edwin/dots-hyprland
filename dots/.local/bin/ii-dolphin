@@ -4,6 +4,7 @@ if ! test -x /usr/bin/dolphin; then
 fi
 plugins="$HOME/.local/lib/ii-dolphin-plugins"
 if test -r "$plugins/generic/libii-places-format.so"; then
+    if [ "$#" -eq 0 ]; then set -- --new-window; fi
     export QT_PLUGIN_PATH="$plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
     exec /usr/bin/dolphin -plugin ii-places-format "$@"
 fi

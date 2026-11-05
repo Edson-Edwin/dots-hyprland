@@ -83,17 +83,25 @@ private:
             const auto volume = value.toObject();
             auto *button = new QPushButton(QIcon::fromTheme("drive-removable-media"),
                                            volume["title"].toString(), content);
-            button->setToolTip(tr("No recognized filesystem. Click to inspect this volume in Disks."));
+            const bool emptyTable = volume["emptyTable"].toBool();
+            if (emptyTable) {
+                button->setText(volume["title"].toString() + "\n" + tr("No partitions"));
+                button->setToolTip(tr("Open Disks to inspect the free space on this drive."));
+            } else {
+                button->setToolTip(tr("No recognized filesystem. Click to inspect this volume in Disks."));
+            }
             const QStringList args{helperPath(), "--device", volume["path"].toString(),
                                    "--token", volume["token"].toString()};
             connect(button, &QPushButton::clicked, button, [args] {
                 QProcess::startDetached("/usr/bin/python3", args + QStringList{"--inspect"});
             });
-            button->setContextMenuPolicy(Qt::ActionsContextMenu);
-            auto *format = button->addAction(tr("Format…"));
-            connect(format, &QAction::triggered, button, [args] {
-                QProcess::startDetached("/usr/bin/python3", args);
-            });
+            if (!emptyTable) {
+                button->setContextMenuPolicy(Qt::ActionsContextMenu);
+                auto *format = button->addAction(tr("Format…"));
+                connect(format, &QAction::triggered, button, [args] {
+                    QProcess::startDetached("/usr/bin/python3", args);
+                });
+            }
             layout->addWidget(button);
         }
         auto *old = panel->widget();

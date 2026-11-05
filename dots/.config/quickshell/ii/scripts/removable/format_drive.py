@@ -22,6 +22,7 @@ class Volume:
     model: str
     label: str
     fs: str
+    empty_table: bool = False
 
     def title(self):
         return f"{self.model} · {self.size/2**30:.1f} GiB · {self.label or 'Unlabelled'} ({self.fs or 'unformatted'}) · {self.path}"
@@ -34,7 +35,7 @@ def sysattr(name, key):
         return ""
 
 
-def candidates(disks, attr=sysattr):
+def candidates(disks, attr=sysattr, *, include_empty_tables=False):
     result = []
     # Do not offer system, active layered, encrypted, or swap devices.
     unsafe_fs = {"swap","crypto_luks","lvm2_member","linux_raid_member","zfs_member","iso9660","udf","btrfs"}
@@ -51,25 +52,30 @@ def candidates(disks, attr=sysattr):
         if any(str(p.get("fstype") or "").lower() in unsafe_fs for p in nodes): continue
         mounts = [m for p in nodes for m in (p.get("mountpoints") or []) if m]
         if any(not any(m.startswith(prefix) for prefix in ("/run/media/","/media/","/mnt/")) for m in mounts): continue
-        if not parts and disk.get("pttype"): continue
+        empty_table = bool(not parts and disk.get("pttype"))
+        if empty_table and (not include_empty_tables or mounts or disk.get("fstype")):
+            continue
         for p in parts or [disk]:
             if p["ro"] or not p["size"] or (p is not disk and p["type"]!="part"): continue
             if str(p.get("parttype") or "").lower() in boot_types|{"0x5","0xf","0x85"}: continue
             result.append(Volume(p["path"],p["maj:min"],seq,p.get("uuid") or "",p.get("partuuid") or "",
-                p["size"],(disk.get("model") or name).strip(),p.get("label") or "",p.get("fstype") or ""))
+                p["size"],(disk.get("model") or name).strip(),p.get("label") or "",p.get("fstype") or "", empty_table))
     return result
 
 
-def scan():
+def scan(*, include_empty_tables=False):
     cols="NAME,PATH,TYPE,MAJ:MIN,TRAN,RM,RO,SIZE,MODEL,LABEL,FSTYPE,MOUNTPOINTS,PTTYPE,PARTTYPE,UUID,PARTUUID"
     p=subprocess.run(["lsblk","-J","-b","-o",cols],capture_output=True,text=True,check=True,timeout=6)
-    return candidates(json.loads(p.stdout)["blockdevices"])
+    return candidates(json.loads(p.stdout)["blockdevices"], include_empty_tables=include_empty_tables)
 
 
-def launch(volume, inventory=scan, start=subprocess.Popen, stat_fn=os.stat, *, inspect=False):
+def launch(volume, inventory=None, start=subprocess.Popen, stat_fn=os.stat, *, inspect=False):
     # Revalidate the same disk incarnation, volume and kernel device number
     # after any selection dialog. No mkfs/format command runs in this helper.
-    if volume not in inventory(): raise ValueError("That drive changed or was removed. Open the chooser again.")
+    if volume.empty_table and not inspect:
+        raise ValueError("This drive has no volumes. Open Disks to inspect its free space.")
+    current = inventory() if inventory is not None else scan(include_empty_tables=inspect)
+    if volume not in current: raise ValueError("That drive changed or was removed. Open the chooser again.")
     st=stat_fn(volume.path)
     if not stat.S_ISBLK(st.st_mode) or f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"!=volume.devno:
         raise ValueError("The selected device is no longer available.")
@@ -125,10 +131,10 @@ def main():
     arg.add_argument("--unrecognized", action="store_true")
     a=arg.parse_args()
     if a.watch:watch();return
-    choices=scan()
+    choices = scan(include_empty_tables=a.unrecognized or a.inspect)
     if a.unrecognized:
         print(json.dumps([{"title": f"{v.size / 2**30:.1f} GiB · {v.path}",
-                          "path": v.path, "token": fingerprint(v)}
+                          "path": v.path, "token": fingerprint(v), "emptyTable": v.empty_table}
                          for v in choices if not v.fs]))
         return
     if a.inspect and not a.device:
