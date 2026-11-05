@@ -37,9 +37,15 @@ The horizontal top bar uses one black background with no group pills. On an exis
 
 ## Dolphin format wheel
 
-Alt+left-click one supported local file in Dolphin, or right-click it and select **Convert format…**. Choose a wedge, review the proposed output, and select **Yes, create copy**. Escape cancels. A numbered name is used if the destination already exists. The original is kept. Dolphin may need a new window to discover a newly installed service menu.
+Alt+left-click one supported local file in Dolphin, or right-click it and select **Convert / PDF tools…**. Choose a wedge, review the proposed output, and select **Yes, create copy**. Escape cancels. A numbered name is used if the destination already exists. The original is kept. Dolphin may need a new window to discover a newly installed service menu.
 
 PDF → editable DOCX or TXT extracts selectable text (not layout or OCR); PDF → PNG or JPEG renders the first page. Single-frame PNG, JPEG, WebP, BMP, GIF and TIFF images can be converted to PNG, JPEG, WebP or PDF. Unsupported targets aren't offered. The wheel is local and runs only when opened. It uses GTK 3, GTK Layer Shell, PyGObject, Cairo, Pillow, Python D-Bus, and Poppler utilities.
+
+## Combine images, merge PDFs, and split pages
+
+In Dolphin, select your JPGs, PNGs, PDFs, or a mix. Right-click the selection and choose **Convert / PDF tools…**. The input list shows the exact page order; use **Move up / Move down**, then **Review and create… → Yes**. Images each contribute one page; PDF pages stay as PDF content. The output is saved beside the first input in the list.
+
+For one PDF, Alt+click it and choose **PAGES** on the wheel. Extract or reorder pages with `3,1-2`; omit a page to leave it out. Split into groups with `1-3;4-6`, export each page separately, or rotate all pages left or right. Split jobs create a numbered set inside a new folder. Existing files aren't replaced. Locked PDFs are unsupported. Combining/extracting copies pages, not document-level items such as signatures and bookmarks. Requires libqpdf (Fedora: `qpdf-libs`).
 
 ## Downloads organizer
 

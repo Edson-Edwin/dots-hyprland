@@ -3,11 +3,10 @@ Name=File format wheel
 Type=Service
 MimeType=application/pdf;image/png;image/jpeg;image/webp;image/tiff;image/bmp;image/gif;
 X-KDE-Protocol=file
-X-KDE-MaxNumberOfUrls=1
 X-KDE-Priority=TopLevel
 Actions=wheel;
 
 [Desktop Action wheel]
-Name=Convert format…
+Name=Convert / PDF tools…
 Icon=document-export
-Exec=/usr/bin/python3 -c "import os,sys; os.execl(sys.executable,sys.executable,os.path.expanduser('~/.config/hypr/hyprland/scripts/edson/format-wheel/wheel.py'),sys.argv[1])" %f
+Exec=/usr/bin/python3 -c "import os,sys; os.execv(sys.executable,[sys.executable,os.path.expanduser('~/.config/hypr/hyprland/scripts/edson/format-wheel/wheel.py'),*sys.argv[1:]])" %F

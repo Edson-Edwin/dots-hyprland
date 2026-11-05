@@ -197,6 +197,7 @@ packages = [
   "python3-pillow",
   "python3-dbus",
   "poppler-utils",
+  "qpdf-libs",
   "python3-pyside6",
   "python3-requests",
   "python3-psutil",

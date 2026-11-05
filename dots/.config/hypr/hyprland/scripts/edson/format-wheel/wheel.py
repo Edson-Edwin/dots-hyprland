@@ -42,6 +42,9 @@ def label(c,x,y,s,size,key,bold=False,width=100):
 class Wheel:
     def __init__(self,file):
         self.file=file;self.options=choices(file);self.items=list(self.options)
+        if file.suffix.lower()==".pdf":
+            self.options["pages"]="PDF tools"
+            self.items=list(self.options)
         self.sel=None;self.card=None;self.busy=False
         w=self.win=Gtk.Window();w.set_title("Convert format");w.set_app_paintable(True)
         visual=w.get_screen().get_rgba_visual()
@@ -126,6 +129,8 @@ class Wheel:
             self.confirm(self.items[self.sel]);return True
         return False
     def confirm(self,fmt):
+        if fmt=="pages":
+            os.execl(sys.executable,sys.executable,str(Path(__file__).with_name("pdf_dialog.py")),str(self.file))
         card=self.card=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);card.set_name("convert-card")
         card.set_halign(Gtk.Align.START);card.set_valign(Gtk.Align.START)
         wid=min(360,self.area.get_allocated_width()-18)
@@ -158,6 +163,8 @@ class Wheel:
         yes.connect("clicked",start);self.overlay.add_overlay(card);card.show_all();self.area.queue_draw();cancel.grab_focus()
 
 if __name__=="__main__":
+    if len(sys.argv)>2:
+        os.execv(sys.executable,[sys.executable,str(Path(__file__).with_name("pdf_dialog.py")),*sys.argv[1:]])
     if len(sys.argv)==2:
         file=Path(sys.argv[1]).absolute()
         if file.is_file() and not file.is_symlink() and choices(file):
