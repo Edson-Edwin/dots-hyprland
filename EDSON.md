@@ -95,4 +95,4 @@ From the repository root, the checks below cover process/port parsing, thumbnail
 for t in tests/edson/test_*.py; do /usr/bin/python3 "$t" || exit 1; done
 ```
 
-Connecting an external display automatically starts presentation mirroring at its preferred resolution and refresh rate; no display dimensions need to be entered. At login, a single already-connected external display is detected too. The external image fills its screen without stretching. Use Super+Alt+P to return to your extended layout. The laptop can have bars if its aspect ratio differs. With several external outputs, select which one to fill. This shortcut makes session-only changes; it does not overwrite your saved extended layout.
+Connecting an external display extends the desktop. Press Super+Alt+P only when you want presentation mirroring at the external display’s preferred mode. Press it again to extend and return the laptop’s workspaces. The laptop may show bars when aspect ratios differ.

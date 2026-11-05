@@ -17,14 +17,24 @@ for name,mode,refresh in [('HDMI-A-1',(1920,1080),60),('DP-2',(3840,2160),120),(
   assert 'mode="preferred"' in cmd[1]
   a[n]['mirrorOf']=target or 'none'
   if n==name:
-   assert 'position="0x0"' in cmd[1]
-   a[n].update(width=mode[0],height=mode[1],refreshRate=refresh,x=0)
- with patch.dict(ns,outputs=lambda:deepcopy(a),ctl=ctl):
-  a.pop(name);assert apply(True,name)==None
+   assert 'position="auto-right"' in cmd[1]
+   a[n].update(width=mode[0],height=mode[1],refreshRate=refresh,x=1920)
+ moved=[];placements={1:"eDP-1",2:"eDP-1",6:name}
+ def fake(*cmd):
+  if cmd==("-j","workspaces"):
+   return json.dumps([dict(id=i,monitor=m,windows=1) for i,m in placements.items()])
+  if cmd[0]=="dispatch":
+   if "workspace.move" in cmd[1]:
+    i=int(re.search(r"workspace=(\d+)",cmd[1])[1]);placements[i]="eDP-1";moved.append(i)
+   return "ok"
+  return ctl(*cmd)
+ import tempfile,os
+ with tempfile.TemporaryDirectory() as td,patch.dict(os.environ,XDG_RUNTIME_DIR=td),patch.dict(ns,outputs=lambda:deepcopy(a),ctl=fake):
+  a.pop(name);assert "not changed" in apply()
   a[name]=deepcopy(ext)
-  for port in [name,None,name]:
-   assert f'{mode[0]}×{mode[1]}' in apply(True,port)
-   assert a['eDP-1']['mirrorOf']==name and a[name]['mirrorOf']=='none'
-  assert 'Extended' in apply() and a[name]['x']==1920 and a['eDP-1']['mirrorOf']=='none'
-  a['DP-6']={**ext,'name':'DP-6'};assert apply(True)==None
-print('PASS: connect, login, repeated event, disconnect/no target, preferred timings and origin, extend, multi-screen startup')
+  assert apply(True,name) is None and a["eDP-1"]["mirrorOf"]=="none"
+  assert f"{mode[0]}×{mode[1]}" in apply()
+  placements.update({1:name,2:name})
+  assert "Extended" in apply() and a[name]["x"]==1920
+  assert sorted(moved)==[1,2] and placements[6]==name
+print("PASS: no mirroring on connect/login, manual presentation at preferred mode, non-overlapping placement and laptop workspace restoration")

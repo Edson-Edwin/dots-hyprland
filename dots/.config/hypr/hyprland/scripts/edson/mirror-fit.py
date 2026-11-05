@@ -43,6 +43,7 @@ def until(check):
 
 
 def apply(auto=False, connector=None):
+    if auto: return None  # Old hot-plug hooks must never move the desktop.
     active = outputs()
     laptop = next((name for name in active if name.startswith(("eDP", "LVDS", "DSI"))), None)
     if not laptop:
@@ -50,22 +51,7 @@ def apply(auto=False, connector=None):
     external = [name for name in active if name != laptop and not name.startswith(("HEADLESS", "FALLBACK"))]
     if not external:
         return None if auto else "Connect an external display first. Your layout was not changed."
-    if auto:
-        # No chooser on connect/login. Leave an ongoing presentation alone when
-        # a second output arrives. An ambiguous initial setup stays as saved.
-        if connector is not None and connector not in external:
-            return None
-        if mirror(active[laptop]) and active[laptop]["mirrorOf"] in external:
-            target = active[laptop]["mirrorOf"]
-            if connector and connector != target:
-                return None
-        elif connector:
-            target = connector
-        elif len(external) == 1:
-            target = external[0]
-        else:
-            return None
-    elif len(external) == 1:
+    if len(external) == 1:
         target = external[0]
     else:
         choice = subprocess.run(["fuzzel", "--dmenu", "--keyboard-focus=exclusive",
@@ -75,7 +61,8 @@ def apply(auto=False, connector=None):
             return None
         target = choice.stdout.strip()
 
-    if not auto and active[laptop].get("mirrorOf") == target:
+    session = Path(os.environ["XDG_RUNTIME_DIR"])/("ii-presentation-"+os.environ.get("HYPRLAND_INSTANCE_SIGNATURE","session")+".json")
+    if active[laptop].get("mirrorOf") == target:
         ctl("reload")  # Restore the saved extended layout, including positions and timings.
         extended = lambda a: laptop in a and target in a and not mirror(a[laptop]) and not mirror(a[target])
         try:
@@ -88,11 +75,23 @@ def apply(auto=False, connector=None):
             ctl("eval", rule(a[laptop], position="0x0"))
             ctl("eval", rule(a[target], position="auto-right"))
             until(extended)
+        if session.is_file():
+            saved=json.loads(session.read_text())
+            ws={w["id"]:w["monitor"] for w in json.loads(ctl("-j","workspaces"))}
+            if saved["target"]==target and saved["laptop"]==laptop:
+                for i in saved["ids"]:
+                    if isinstance(i,int) and i>0 and ws.get(i)==target:
+                        ctl("dispatch",f"hl.dsp.workspace.move({{workspace={i},monitor={json.dumps(laptop)}}})")
+                i=saved.get("focus")
+                if i in saved["ids"] and i in ws: ctl("dispatch",f"hl.dsp.focus({{workspace={i}}})")
+            session.unlink()
         return "Extended displays restored."
 
+    ids=[w["id"] for w in json.loads(ctl("-j","workspaces")) if w["monitor"]==laptop and w["id"]>0 and w["windows"]]
+    session.write_text(json.dumps({"ids":ids,"target":target,"laptop":laptop,"focus":active[laptop].get("activeWorkspace",{}).get("id")}))
     try:
         # The external must stop mirroring before it can become the source.
-        ctl("eval", rule(active[target], position="0x0" if len(external) == 1 else None))
+        ctl("eval", rule(active[target], position="auto-right" if len(external) == 1 else None))
         until(lambda a: target in a and not mirror(a[target]))
         ctl("eval", rule(active[laptop], target))
         until(lambda a: laptop in a and a[laptop].get("mirrorOf") == target)
@@ -107,7 +106,7 @@ def apply(auto=False, connector=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--auto", action="store_true", help="mirror on connection; never toggle back to extend")
+    parser.add_argument("--auto", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("connector", nargs="?")
     args = parser.parse_args()
     try:
