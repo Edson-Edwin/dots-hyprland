@@ -47,6 +47,12 @@ In Dolphin, select your JPGs, PNGs, PDFs, or a mix. Right-click the selection an
 
 For one PDF, Alt+click it and choose **PAGES** on the wheel. Extract or reorder pages with `3,1-2`; omit a page to leave it out. Split into groups with `1-3;4-6`, export each page separately, or rotate all pages left or right. Split jobs create a numbered set inside a new folder. Existing files aren't replaced. Locked PDFs are unsupported. Combining/extracting copies pages, not document-level items such as signatures and bookmarks. Requires libqpdf (Fedora: `qpdf-libs`).
 
+## Format removable storage
+
+Connect a USB drive or SD card and open **Super+N**. A USB icon appears in the top row for eligible writable media. Click it to open GNOME Disks for the target volume; if several volumes are available, select one by device, size and label first. In Disks, choose a filesystem and turn **Erase** on for a full overwrite instead of a quick format. Review the device and confirm in Disks to start. The action never formats anything just because you connected it.
+
+Like Windows volume formatting, this targets one volume and preserves sibling partitions. For unpartitioned media it targets the whole device. Internal disks, read-only media, system mounts, swap, and layered storage are excluded. Drive discovery runs only while the sidebar is open. Requires GNOME Disks, UDisks2, lsblk, kdialog, and Python D-Bus/GLib.
+
 ## Desktop recovery
 
 Open **Super+N → Desktop recovery** (top row), press **Super+Alt+Esc**, or run `~/.local/bin/ii-desktop-recovery` even when Quickshell is down. Check Hyprland and the ii IPC, restart the panel without logging out, create a verified working backup, or choose a backup to restore. The archives and sibling SHA-256 files live in `~/.local/state/ii-desktop-recovery/snapshots/` (or your XDG state directory). Keep them private and copy them to another drive for disk-failure protection.

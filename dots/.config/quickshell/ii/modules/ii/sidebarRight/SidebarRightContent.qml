@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Bluetooth
 import Quickshell.Hyprland
 
@@ -27,6 +28,15 @@ Item {
     property bool showAudioInputDialog: false
     property bool showBluetoothDialog: false
     property bool showNightLightDialog: false
+    readonly property string formatDriveTool: Quickshell.shellPath("scripts/removable/format_drive.py")
+    property bool hasRemovableVolume: false
+    Process {
+        running: GlobalStates.sidebarRightOpen
+        command: ["/usr/bin/python3", root.formatDriveTool, "--watch"]
+        stdout: SplitParser { onRead: line => { root.hasRemovableVolume = line.trim() === "1"; } }
+        onExited: root.hasRemovableVolume = false
+    }
+
     property bool showDownloadsDialog: false
     property bool showWifiDialog: false
     property bool editMode: false
@@ -297,6 +307,16 @@ Item {
                 StyledToolTip {
                     text: Translation.tr("Edit quick toggles") + (root.editMode ? Translation.tr("\nLMB to enable/disable\nRMB to toggle size\nScroll to swap position") : "")
                 }
+            }
+            QuickToggleButton {
+                visible: root.hasRemovableVolume
+                toggled: false
+                buttonIcon: "usb"
+                onClicked: {
+                    GlobalStates.sidebarRightOpen = false;
+                    Quickshell.execDetached(["/usr/bin/python3", root.formatDriveTool]);
+                }
+                StyledToolTip { text: Translation.tr("Format USB or SD volume…") }
             }
             QuickToggleButton {
                 toggled: false

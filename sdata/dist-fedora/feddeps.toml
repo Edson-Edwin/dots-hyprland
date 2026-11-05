@@ -159,6 +159,7 @@ packages = [
   "qt6-qttranslations",
   "qt6-qtvirtualkeyboard",
   "kdialog",
+  "gnome-disk-utility",
   "kf6-syntax-highlighting"
 ]
 
