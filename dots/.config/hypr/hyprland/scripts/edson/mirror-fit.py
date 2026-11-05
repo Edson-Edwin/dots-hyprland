@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fill an external display when mirroring. Only change live monitor rules."""
+"""Toggle an edge-to-edge presentation on an external display. Never run on hot-plug."""
 import argparse
 import fcntl
 import json
@@ -9,117 +9,91 @@ import subprocess
 import sys
 import time
 
+PROJECTOR = Path(__file__).resolve().with_name("projector")
 
 def ctl(*args):
     p = subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=5)
-    if p.returncode or (args[0] == "eval" and "error" in p.stdout.lower()):
-        raise RuntimeError((p.stderr or p.stdout).strip() or "Hyprland rejected the layout.")
+    if p.returncode or (args[0] in ("eval","dispatch") and "error" in p.stdout.lower()):
+        raise RuntimeError((p.stderr or p.stdout).strip() or "Hyprland rejected the request.")
     return p.stdout
 
-
 def outputs():
-    return {m["name"]: m for m in json.loads(ctl("-j", "monitors", "all"))
-            if not m.get("disabled") and m["width"] > 0}
+    return {m["name"]:m for m in json.loads(ctl("-j","monitors","all"))
+            if not m.get("disabled") and m["width"]>0}
 
+def qs(*args, env=None):
+    return subprocess.run(["qs","-p",str(PROJECTOR),*args],capture_output=True,text=True,timeout=8,env=env)
 
-def mirror(m):
-    return m.get("mirrorOf") not in ("none", "", None)
+def call(method):
+    return qs("ipc","call","projector",method)
 
-
-def rule(m, mirror_of="", position=None):
-    pos = position or f'{m["x"]}x{m["y"]}'
-    # Use advertised preferred timings. Preserve each screen's rotation and UI scale.
-    parts = {"output": m["name"], "mode": "preferred", "position": pos,
-             "scale": m["scale"], "transform": m["transform"], "mirror": mirror_of}
-    return "hl.monitor({" + ",".join(f"{k}={json.dumps(v)}" for k, v in parts.items()) + "})"
-
-
-def until(check):
+def stop():
+    if call("stop").returncode:
+        qs("kill")  # Only this projection instance, never the desktop shell.
     for _ in range(20):
-        if check(outputs()):
-            return
-        time.sleep(.12)
-    raise RuntimeError("Hyprland did not confirm the requested display layout.")
+        if call("status").returncode:return
+        time.sleep(.1)
+    raise RuntimeError("The presentation window did not close.")
 
+def independent(m,pos):
+    opts={"output":m["name"],"mode":"preferred","position":pos,"scale":m["scale"],
+          "transform":m["transform"],"mirror":""}
+    return "hl.monitor({"+",".join(f"{k}={json.dumps(v)}" for k,v in opts.items())+"})"
 
-def apply(auto=False, connector=None):
-    if auto: return None  # Old hot-plug hooks must never move the desktop.
-    active = outputs()
-    laptop = next((name for name in active if name.startswith(("eDP", "LVDS", "DSI"))), None)
-    if not laptop:
-        return None if auto else "No active built-in laptop display."
-    external = [name for name in active if name != laptop and not name.startswith(("HEADLESS", "FALLBACK"))]
-    if not external:
-        return None if auto else "Connect an external display first. Your layout was not changed."
-    if len(external) == 1:
-        target = external[0]
+def prepare(laptop,target):
+    source,external=laptop["name"],target["name"]
+    if laptop.get("mirrorOf")==external or target.get("mirrorOf")==source:
+        # A native clone cannot host a separate fullscreen surface. Replace
+        # only this explicitly chosen pair with non-overlapping outputs.
+        inherited=target.get("activeWorkspace",{}).get("id") if laptop.get("mirrorOf")==external else None
+        ctl("eval",independent(target,"auto-right")+";"+independent(laptop,"0x0"))
+        for _ in range(25):
+            ms=outputs()
+            if all(ms.get(n,{}).get("mirrorOf")=="none" for n in (source,external)):break
+            time.sleep(.1)
+        else:raise RuntimeError("Could not separate the native mirror. Apply the extended layout first.")
+        if inherited and inherited>0:
+            ctl("dispatch",f"hl.dsp.workspace.move({{workspace={inherited},monitor={json.dumps(source)}}})")
+    elif any(m.get("mirrorOf") not in (None,"none","") for m in (laptop,target)):
+        raise RuntimeError("Extend these displays before presenting; one is mirroring another output.")
+
+def apply(auto=False):
+    if auto:return None
+    if call("status").returncode==0:
+        stop();return "Presentation stopped. Both displays are independent."
+    ms=outputs()
+    laptop=next((k for k in ms if k.startswith(("eDP","LVDS","DSI"))),None)
+    if laptop is None:return "No active laptop display."
+    external=[k for k in ms if k!=laptop and not k.startswith(("HEADLESS","FALLBACK"))]
+    if not external:return "Connect an external display first. Your layout was not changed."
+    if len(external)==1:target=external[0]
     else:
-        choice = subprocess.run(["fuzzel", "--dmenu", "--keyboard-focus=exclusive",
-                                 "--prompt", "Mirror display: "], input="\n".join(external),
-                                text=True, capture_output=True)
-        if choice.returncode or choice.stdout.strip() not in external:
-            return None
-        target = choice.stdout.strip()
+        p=subprocess.run(["fuzzel","--dmenu","--keyboard-focus=exclusive","--prompt","Present on: "],
+                         input="\n".join(external),text=True,capture_output=True)
+        target=p.stdout.strip()
+        if p.returncode or target not in external:return None
+    prepare(ms[laptop],ms[target])
+    ctl("dispatch","hl.dsp.focus({monitor="+json.dumps(laptop)+"})")
+    started=qs("-n","-d",env={**os.environ,"II_PRESENT_FROM":laptop,"II_PRESENT_TO":target})
+    if started.returncode:raise RuntimeError(started.stderr.strip() or "Projector failed to start.")
+    for _ in range(40):
+        if call("status").stdout.strip()=="ready":
+            return f"Presenting the entire laptop screen on {target}. Super+Alt+P stops."
+        time.sleep(.15)
+    qs("kill")
+    raise RuntimeError("Couldn't capture the laptop screen. The projection has been closed.")
 
-    session = Path(os.environ["XDG_RUNTIME_DIR"])/("ii-presentation-"+os.environ.get("HYPRLAND_INSTANCE_SIGNATURE","session")+".json")
-    if active[laptop].get("mirrorOf") == target:
-        ctl("reload")  # Restore the saved extended layout, including positions and timings.
-        extended = lambda a: laptop in a and target in a and not mirror(a[laptop]) and not mirror(a[target])
-        try:
-            until(extended)
-        except RuntimeError:
-            a = outputs()
-            if laptop not in a or target not in a:
-                return "Display disconnected; the saved layout has been reloaded."
-            # A saved Mirror profile may itself be active. Override it for this session.
-            ctl("eval", rule(a[laptop], position="0x0"))
-            ctl("eval", rule(a[target], position="auto-right"))
-            until(extended)
-        if session.is_file():
-            saved=json.loads(session.read_text())
-            ws={w["id"]:w["monitor"] for w in json.loads(ctl("-j","workspaces"))}
-            if saved["target"]==target and saved["laptop"]==laptop:
-                for i in saved["ids"]:
-                    if isinstance(i,int) and i>0 and ws.get(i)==target:
-                        ctl("dispatch",f"hl.dsp.workspace.move({{workspace={i},monitor={json.dumps(laptop)}}})")
-                i=saved.get("focus")
-                if i in saved["ids"] and i in ws: ctl("dispatch",f"hl.dsp.focus({{workspace={i}}})")
-            session.unlink()
-        return "Extended displays restored."
-
-    ids=[w["id"] for w in json.loads(ctl("-j","workspaces")) if w["monitor"]==laptop and w["id"]>0 and w["windows"]]
-    session.write_text(json.dumps({"ids":ids,"target":target,"laptop":laptop,"focus":active[laptop].get("activeWorkspace",{}).get("id")}))
+if __name__=="__main__":
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--auto",action="store_true",help=argparse.SUPPRESS)
+    parser.add_argument("connector",nargs="?",help=argparse.SUPPRESS)
+    args=parser.parse_args()
     try:
-        # The external must stop mirroring before it can become the source.
-        ctl("eval", rule(active[target], position="auto-right" if len(external) == 1 else None))
-        until(lambda a: target in a and not mirror(a[target]))
-        ctl("eval", rule(active[laptop], target))
-        until(lambda a: laptop in a and a[laptop].get("mirrorOf") == target)
-    except (RuntimeError, subprocess.SubprocessError):
-        ctl("reload")
-        raise
-    display = outputs().get(target)
-    if not display:
-        return None
-    return f"{target}: {display['width']}×{display['height']}. Press Super+Alt+P to extend."
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--auto", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("connector", nargs="?")
-    args = parser.parse_args()
-    try:
-        # Login and hot-plug events can coincide. Serialize short-lived workers.
-        with (Path(os.environ["XDG_RUNTIME_DIR"]) / "edson-display-layout.lock").open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            message = apply(args.auto, args.connector)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as err:
-        message = f"Display change failed: {err}"
-        print(message, file=sys.stderr)
-        status = 1
-    else:
-        status = 0
-    if message:
-        subprocess.run(["notify-send", "Display layout", message], check=False)
+        with (Path(os.environ["XDG_RUNTIME_DIR"])/"edson-display-layout.lock").open("a") as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX)
+            message=apply(args.auto)
+        status=0
+    except (ValueError,OSError,RuntimeError,subprocess.SubprocessError) as e:
+        message=f"Presentation failed: {e}";status=1
+    if message:subprocess.run(["notify-send","Display layout",message],check=False)
     sys.exit(status)

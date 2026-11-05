@@ -20,7 +20,7 @@ The Fedora dependency list includes PySide6 and requests for Voice & Chat, psuti
 
 | Shortcut | Action |
 |---|---|
-| Super+Alt+P | Fill the chosen external display when mirroring; press again to extend. |
+| Super+Alt+P | Present the whole laptop screen edge-to-edge on the chosen external display; press again to stop. |
 | Super+B | Open System / Anime as a sliding left panel, even after detaching it. |
 | Super+N | Open the right sidebar. Nearby Wi-Fi refreshes while the list is open. |
 | Super+F6 | Choose a preset, restore the previous palette, or use wallpaper colors. |
@@ -95,4 +95,4 @@ From the repository root, the checks below cover process/port parsing, thumbnail
 for t in tests/edson/test_*.py; do /usr/bin/python3 "$t" || exit 1; done
 ```
 
-Connecting an external display extends the desktop. Press Super+Alt+P only when you want presentation mirroring at the external display’s preferred mode. Press it again to extend and return the laptop’s workspaces. The laptop may show bars when aspect ratios differ.
+Connecting a screen leaves it extended. **Super+Alt+P** starts a fullscreen, view-only projector on the external output. Keep working on the laptop. The entire source frame, including its pointer, fills the target without cropping; different aspect ratios stretch the image slightly. The external desktop stays underneath and returns when you stop. Unplugging the target closes the projector. Use this shortcut instead of the native monitor settings’ aspect-preserving Mirror option.

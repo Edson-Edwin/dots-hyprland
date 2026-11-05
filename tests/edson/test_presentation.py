@@ -1,40 +1,26 @@
-"""Exercise presentation mirroring with synthetic displays, without touching the desktop."""
-import runpy,json,re
+"""Check presentation lifecycle without modifying a real desktop."""
+import runpy
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
-from copy import deepcopy
-apply=runpy.run_path(str(Path(__file__).resolve().parents[2] / 'dots/.config/hypr/hyprland/scripts/edson/mirror-fit.py'))['apply'];ns=apply.__globals__
-for name,mode,refresh in [('HDMI-A-1',(1920,1080),60),('DP-2',(3840,2160),120),('DP-3',(3440,1440),100)]:
- laptop=dict(name='eDP-1',width=1920,height=1200,x=0,y=0,scale=1,transform=0,mirrorOf='none')
- ext={**laptop,'name':name,'width':1280,'height':720,'x':1920}
- saved={m['name']:m for m in (laptop,ext)}
- a=deepcopy(saved)
- def ctl(*cmd):
-  if cmd==('reload',):
-   a.clear();a.update(deepcopy(saved));return
-  n=json.loads(re.search(r'output=("[^"]+")',cmd[1])[1])
-  target=json.loads(re.search(r'mirror=("[^"]*")',cmd[1])[1])
-  assert 'mode="preferred"' in cmd[1]
-  a[n]['mirrorOf']=target or 'none'
-  if n==name:
-   assert 'position="auto-right"' in cmd[1]
-   a[n].update(width=mode[0],height=mode[1],refreshRate=refresh,x=1920)
- moved=[];placements={1:"eDP-1",2:"eDP-1",6:name}
- def fake(*cmd):
-  if cmd==("-j","workspaces"):
-   return json.dumps([dict(id=i,monitor=m,windows=1) for i,m in placements.items()])
-  if cmd[0]=="dispatch":
-   if "workspace.move" in cmd[1]:
-    i=int(re.search(r"workspace=(\d+)",cmd[1])[1]);placements[i]="eDP-1";moved.append(i)
-   return "ok"
-  return ctl(*cmd)
- import tempfile,os
- with tempfile.TemporaryDirectory() as td,patch.dict(os.environ,XDG_RUNTIME_DIR=td),patch.dict(ns,outputs=lambda:deepcopy(a),ctl=fake):
-  a.pop(name);assert "not changed" in apply()
-  a[name]=deepcopy(ext)
-  assert apply(True,name) is None and a["eDP-1"]["mirrorOf"]=="none"
-  assert f"{mode[0]}×{mode[1]}" in apply()
-  placements.update({1:name,2:name})
-  assert "Extended" in apply() and a[name]["x"]==1920
-  assert sorted(moved)==[1,2] and placements[6]==name
-print("PASS: no mirroring on connect/login, manual presentation at preferred mode, non-overlapping placement and laptop workspace restoration")
+g=runpy.run_path(str(Path(__file__).resolve().parents[2]/'dots/.config/hypr/hyprland/scripts/edson/mirror-fit.py'))['apply'].__globals__
+apply=g['apply']
+ms={n:dict(name=n,mirrorOf="none",scale=1,transform=0) for n in ['eDP-1','HDMI-A-1']}
+live=False;calls=[]
+def result(rc=0,out=''):return SimpleNamespace(returncode=rc,stdout=out,stderr='')
+def call(name):
+    global live
+    if name=='stop':live=False;return result()
+    return result(0 if live else 1,'ready' if live else '')
+def qs(*args,env=None):
+    global live
+    assert args==('-n','-d') and env['II_PRESENT_FROM']=='eDP-1' and env['II_PRESENT_TO']=='HDMI-A-1'
+    live=True;return result()
+with patch.dict(g,outputs=lambda:ms,call=call,qs=qs,ctl=lambda *args:calls.append(args)):
+    assert apply(True) is None and not calls
+    assert 'Presenting' in apply() and live
+    assert calls==[('dispatch','hl.dsp.focus({monitor="eDP-1"})')]
+    assert 'stopped' in apply() and not live and len(calls)==1
+    del ms['HDMI-A-1']
+    assert 'not changed' in apply()
+print('PASS: no hot-plug changes, source/target selection, no workspace or mode changes in extended layout, clean stop and no-target fallback')
