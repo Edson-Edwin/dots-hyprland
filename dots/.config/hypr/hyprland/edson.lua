@@ -26,10 +26,20 @@ hl.on("monitor.added", function(m)
 end)
 hl.on("hyprland.start", function() hl.exec_cmd(presentationCommand) end)
 
--- Keep normal selection and Ctrl+click multi-select intact.
-hl.bind("ALT + mouse:272", function()
-    local active = hl.get_active_window()
-    if active and active.class == "org.kde.dolphin" then
-        hl.exec_cmd("/usr/bin/python3 ~/.config/hypr/hyprland/scripts/edson/format-wheel/gesture.py")
+-- Capture the modified click only while Dolphin is active. A normal left
+-- click would collapse a group before Dolphin could pass it to the action.
+local formatClick
+local function updateFormatClick(w)
+    if w and w.class == "org.kde.dolphin" then
+        if not formatClick then
+            formatClick = hl.bind("ALT + mouse:272", hl.dsp.exec_cmd("/usr/bin/python3 ~/.config/hypr/hyprland/scripts/edson/format-wheel/gesture.py"),
+                {release = true, description = "Dolphin: actions for clicked file or selection"})
+        end
+    elseif formatClick then
+        formatClick:unbind()
+        formatClick = nil
     end
-end, { release = true, non_consuming = true, description = "Dolphin: convert selected file" })
+end
+hl.on("window.active", updateFormatClick)
+updateFormatClick(hl.get_active_window())
+hl.bind("SUPER + ALT + Escape", hl.dsp.exec_cmd("~/.local/bin/ii-desktop-recovery"), {description = "Desktop recovery"})

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Group file actions
+Type=Service
+MimeType=all/allfiles;
+X-KDE-Protocol=file
+X-KDE-MinNumberOfUrls=2
+X-KDE-Priority=TopLevel
+Actions=group;
+
+[Desktop Action group]
+Name=Actions for selected files…
+Icon=document-multiple
+Exec=/usr/bin/python3 -c "import os,sys; os.execv(sys.executable,[sys.executable,os.path.expanduser('~/.config/hypr/hyprland/scripts/edson/format-wheel/pdf_dialog.py'),*sys.argv[1:]])" %F

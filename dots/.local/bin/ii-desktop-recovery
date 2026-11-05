@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""Private, checksummed backups and recovery for a Hyprland / ii desktop."""
+import argparse
+import contextlib
+from datetime import datetime, timezone
+import fcntl
+import hashlib
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+
+HOME = Path.home()
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME/".config")
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME/".local/state")
+DATA = Path(os.environ.get("XDG_DATA_HOME") or HOME/".local/share")
+STORE = STATE/"ii-desktop-recovery/snapshots"
+ROOTS = {f"config/{r}": CONFIG/r for r in (
+    "hypr", "quickshell/ii", "illogical-impulse", "fuzzel", "kitty", "matugen",
+    "wireplumber", "nwg-displays", "zshrc.d", "fish/config.fish",
+    "ii-voice-ai/settings.json", "easyeffects/db/easyeffectsrc")}
+ROOTS.update({"state/generated": STATE/"quickshell/user/generated",
+              "data/wheel.desktop": DATA/"kio/servicemenus/ii-format-wheel.desktop",
+              "data/group.desktop": DATA/"kio/servicemenus/ii-group-files.desktop"})
+for name in ("ii-downloads-organizer.service","ii-downloads-organizer@.timer"):
+    ROOTS["config/systemd/user/"+name]=CONFIG/"systemd/user"/name
+for freq in ("hourly","daily","weekly"):
+    name="timers.target.wants/ii-downloads-organizer@"+freq+".timer"
+    ROOTS["config/systemd/user/"+name]=CONFIG/"systemd/user"/name
+
+def run(args,timeout=12,check=True):
+    p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
+    if check and p.returncode:
+        raise RuntimeError((p.stderr or p.stdout or "Command failed: "+args[0]).strip()[-1800:])
+    return p
+
+def validate():
+    path=CONFIG/"hypr/hyprland.lua"
+    if not path.is_file():raise RuntimeError("The Hyprland Lua entry point is missing.")
+    run(["Hyprland","--verify-config","-c",str(path)])
+    err=run(["hyprctl","configerrors"]).stdout.strip()
+    if err:raise RuntimeError(err)
+def shell_ok():
+    p=run(["qs","-c","ii","ipc","show"],timeout=4,check=False)
+    return p.returncode==0 and any("target "+k in p.stdout for k in ("bar","sidebarRight","panelFamily"))
+def health():
+    validate()
+    if not shell_ok():raise RuntimeError("Hyprland configuration OK; the ii shell is not responding.")
+def stop():
+    # With -c ii, Quickshell targets only this configuration on this display.
+    p=run(["qs","-c","ii","list"],check=False)
+    if re.search(r'^Instance ',p.stdout,re.M):
+        run(["qs","-c","ii","kill"])
+        for _ in range(30):
+            if not re.search(r'^Instance ',run(["qs","-c","ii","list"],check=False).stdout,re.M):return
+            time.sleep(.12)
+        raise RuntimeError("The ii shell did not stop.")
+def start():
+    run(["qs","-c","ii","-d","-n"],timeout=20)
+    for _ in range(45):
+        if shell_ok():
+            run(["qs","-c","ii","ipc","call","bar","open"],check=False)
+            return
+        time.sleep(.2)
+    raise RuntimeError("The ii shell did not become ready. Check its configuration or restore a backup.")
+def restart():
+    stop();start()
+
+def checksum(path):
+    with path.open("rb") as f:return hashlib.file_digest(f,"sha256").hexdigest()
+def private_store():
+    STORE.mkdir(parents=True,exist_ok=True,mode=0o700)
+    STORE.chmod(0o700);STORE.parent.chmod(0o700)
+def check_link(key,target):
+    # Allow the known systemd unit links only to this config's shipped service/timer.
+    if key.startswith("config/systemd/user/"):
+        name=Path(key).name
+        template="ii-downloads-organizer@.timer" if name.endswith(".timer") else "ii-downloads-organizer.service"
+        dest=ROOTS[key].parent/target
+        if dest.resolve(strict=False) == (CONFIG/"quickshell/ii/scripts/downloads-organizer"/template).resolve(strict=False):
+            return
+    if os.path.isabs(target):raise ValueError(f"External symlink in backup: {key}")
+    resolved=Path(os.path.normpath(str(Path(key).parent/target)))
+    root=next((Path(r) for r in ROOTS if key==r or key.startswith(r+"/")),None)
+    if not root or not resolved.is_relative_to(root):raise ValueError(f"External symlink in backup: {key}")
+
+def read_backup(path, stage=None, require_core=True):
+    expected=Path(str(path)+".sha256").read_text().strip()
+    if checksum(path)!=expected:raise ValueError("Backup checksum mismatch.")
+    present=set(); modes=[]
+    with tarfile.open(path,"r:gz") as tar:
+        for m in tar:
+            key=m.name
+            if ".." in Path(key).parts or not any(key==r or key.startswith(r+"/") for r in ROOTS):
+                raise ValueError("Unexpected backup path.")
+            if not (m.isdir() or m.isfile() or m.issym()):raise ValueError("Unexpected archive entry.")
+            if m.issym():check_link(key,m.linkname)
+            if stage:
+                dest=stage/key
+                if not dest.parent.resolve().is_relative_to(stage):raise ValueError("Unsafe archive path.")
+                dest.parent.mkdir(parents=True,exist_ok=True)
+                if m.isdir():
+                    dest.mkdir(exist_ok=True);modes.append((dest,m.mode & 0o777))
+                elif m.issym():dest.symlink_to(m.linkname)
+                else:
+                    with dest.open("xb") as out, tar.extractfile(m) as f:shutil.copyfileobj(f,out)
+                    dest.chmod(m.mode & 0o777)
+            present.add(key)
+    for dest,mode in reversed(modes):dest.chmod(mode)
+    if require_core and not {"config/hypr/hyprland.lua","config/quickshell/ii/shell.qml"}<=present:
+        raise ValueError("Incomplete desktop backup.")
+    return present
+
+def snapshot(kind):
+    private_store()
+    if kind=="working":health()
+    stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    path=STORE/f"{stamp}-{kind}.tar.gz"
+    with tempfile.TemporaryDirectory(dir=STORE) as td:
+        tmp=Path(td)/path.name
+        with tarfile.open(tmp,"w:gz") as tar:
+            tar.dereference=False
+            def select(m):
+                if "__pycache__" in Path(m.name).parts or m.name.endswith(".pyc"):return None
+                if m.issym():check_link(m.name,m.linkname)
+                if m.islnk(): # Store regular file bytes independently.
+                    raise ValueError(f"Unsupported hard link: {m.name}")
+                if not (m.isfile() or m.issym() or m.isdir()):return None
+                return m
+            for key,p in ROOTS.items():
+                if p.exists() or p.is_symlink():tar.add(p,arcname=key,filter=select)
+        side=Path(str(tmp)+".sha256");side.write_text(checksum(tmp)+"\n")
+        with tempfile.TemporaryDirectory(dir=td) as verify:read_backup(tmp,Path(verify),require_core=kind=="working")
+        tmp.chmod(0o600);side.chmod(0o600)
+        side.rename(Path(str(path)+".sha256"));tmp.rename(path)
+    return path
+
+def restore(path):
+    # Verify and stage everything before touching any live files. Keep originals
+    # on the same filesystem for rollback even if the restored shell won't start.
+    with tempfile.TemporaryDirectory(dir=STORE) as td, contextlib.ExitStack() as stack:
+        stage=Path(td);present=read_backup(path,stage)
+        safety=snapshot("before-restore")
+        moves=[]
+        for key,p in ROOTS.items():
+            if key not in present and not (p.exists() or p.is_symlink()):continue
+            p.parent.mkdir(parents=True,exist_ok=True)
+            tmp=Path(stack.enter_context(tempfile.TemporaryDirectory(dir=p.parent,prefix=".ii-restore-")))
+            new=tmp/"new";old=tmp/"old";src=stage/key
+            if key in present:
+                if src.is_symlink():new.symlink_to(os.readlink(src))
+                elif src.is_dir():shutil.copytree(src,new,symlinks=True)
+                else:shutil.copy2(src,new)
+            moves.append((p,new,old))
+        applied=[]
+        stop()
+        try:
+            for p,new,old in moves:
+                if p.exists() or p.is_symlink():os.replace(p,old)
+                applied.append((p,new,old))
+                if new.exists() or new.is_symlink():os.replace(new,p)
+            run(["hyprctl","reload"]);validate()
+            run(["systemctl","--user","daemon-reload"]);start()
+        except Exception as exc:
+            try:stop()
+            finally:
+                for p,new,old in reversed(applied):
+                    if p.exists() or p.is_symlink():os.replace(p,new)
+                    if old.exists() or old.is_symlink():os.replace(old,p)
+            run(["hyprctl","reload"],check=False)
+            run(["systemctl","--user","daemon-reload"],check=False)
+            try:start()
+            except Exception:pass
+            raise RuntimeError(f"Restore failed; previous files put back. Safety backup: {safety}\n{exc}") from exc
+    return f"Restored {path.name}. Safety backup: {safety}"
+def working():return sorted(STORE.glob("*-working.tar.gz"),reverse=True)
+def dialog(args):
+    return run(["kdialog","--title","Desktop recovery",*args],timeout=None,check=False)
+def main():
+    os.umask(0o077)
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action",nargs="?",default="menu",choices=["menu","check","restart","backup","list","verify","restore"])
+    parser.add_argument("backup_name",nargs="?")
+    args=parser.parse_args();ui=args.action=="menu";act=args.action
+    private_store()
+    if ui:
+        p=dialog(["--menu","Desktop recovery","check","Check configuration and panel","restart","Restart the ii panel","backup","Back up current working desktop","restore","Restore a working backup…"])
+        if p.returncode:return
+        act=p.stdout.strip()
+    try:
+        with (STORE.parent/"recovery.lock").open("a") as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            if act=="check":health();msg="Hyprland configuration OK. The ii panel is responding."
+            elif act=="restart":restart();msg="The ii panel is responding."
+            elif act=="backup":msg="Verified working backup:\n"+str(snapshot("working"))
+            elif act=="list":msg="\n".join(map(str,working())) or "No working backups."
+            else:
+                files=working()
+                if not files:raise ValueError("No verified working backup is available.")
+                if ui:
+                    p=dialog(["--menu","Choose a working backup (UTC, newest first)",*[x for f in files for x in [f.name,f.name]]])
+                    if p.returncode:return
+                    name=p.stdout.strip()
+                else:name=args.backup_name or files[0].name
+                path=next((f for f in files if f.name==name),None)
+                if not path:raise ValueError("Unknown working backup.")
+                if act=="verify":read_backup(path);msg="Checksum and contents verified: "+str(path)
+                else:
+                    if ui and dialog(["--warningyesno",f"Restore desktop settings from {path.name}?\nChanges to the covered settings since this backup will be replaced. A safety copy is saved first."]).returncode:return
+                    msg=restore(path)
+        if ui:dialog(["--msgbox",msg])
+        else:print(msg)
+    except (OSError,ValueError,RuntimeError,tarfile.TarError,subprocess.SubprocessError) as exc:
+        if ui:dialog(["--error",str(exc)])
+        else:print(exc,file=sys.stderr)
+        sys.exit(1)
+if __name__=="__main__":main()

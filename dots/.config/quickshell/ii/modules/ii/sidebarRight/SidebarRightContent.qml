@@ -300,14 +300,12 @@ Item {
             }
             QuickToggleButton {
                 toggled: false
-                buttonIcon: "restart_alt"
+                buttonIcon: "settings_backup_restore"
                 onClicked: {
-                    Quickshell.execDetached(["hyprctl", "reload"]);
-                    Quickshell.reload(true);
+                    GlobalStates.sidebarRightOpen = false;
+                    Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/ii-desktop-recovery"]);
                 }
-                StyledToolTip {
-                    text: Translation.tr("Reload Hyprland & Quickshell")
-                }
+                StyledToolTip { text: Translation.tr("Desktop recovery") + " · Super+Alt+Esc" }
             }
             QuickToggleButton {
                 toggled: false

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Desktop Recovery
+Comment=Restart the panel, check configuration or restore a desktop backup
+Icon=preferences-system
+Exec=sh -c "exec ~/.local/bin/ii-desktop-recovery"
+Categories=Settings;

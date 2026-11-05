@@ -3,6 +3,7 @@ Name=File format wheel
 Type=Service
 MimeType=application/pdf;image/png;image/jpeg;image/webp;image/tiff;image/bmp;image/gif;
 X-KDE-Protocol=file
+X-KDE-MaxNumberOfUrls=1
 X-KDE-Priority=TopLevel
 Actions=wheel;
 

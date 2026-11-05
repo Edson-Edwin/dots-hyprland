@@ -8,16 +8,17 @@ import threading
 import gi
 gi.require_version("Gtk","3.0")
 from gi.repository import GLib, Gtk
-from pdf_jobs import groups, page_count
+from pdf_jobs import groups, page_count, IMAGES
 
 ACTIONS={"combine":"Combine into one PDF", "extract":"Extract or reorder pages",
-         "split":"Split by page ranges", "each":"One file per page",
+         "split":"Split by page ranges", "each":"One file per page", "zip":"Create a ZIP archive", "list":"Save a filename list",
+         "jpg":"Convert images to JPEG", "png":"Convert images to PNG", "webp":"Convert images to WebP",
          "left":"Rotate all pages left", "right":"Rotate all pages right"}
 
 
 class Dialog(Gtk.Window):
     def __init__(self, files):
-        super().__init__(title="PDF tools")
+        super().__init__(title="File actions" if len(files)>1 else "PDF tools")
         self.files=files;self.busy=False;self.count=None
         self.set_default_size(500,460);self.set_border_width(18)
         self.connect("delete-event",lambda *_: self.busy)
@@ -26,7 +27,10 @@ class Dialog(Gtk.Window):
         self.mode=Gtk.ComboBoxText()
         single=len(files)==1 and files[0].suffix.lower()==".pdf"
         for key,label in ACTIONS.items():
-            if single or key=="combine":self.mode.append(key,label)
+            if key in ("zip","list","jpg","png","webp"):
+                if len(files)>1 and (key in ("zip","list") or all(p.suffix.lower()[1:] in IMAGES for p in files)):
+                    self.mode.append(key,label)
+            elif single or (key=="combine" and all(p.suffix.lower()[1:] in IMAGES|{"pdf"} for p in files)):self.mode.append(key,label)
         box.pack_start(self.mode,False,False,0)
         self.hint=Gtk.Label(xalign=0);self.hint.set_line_wrap(True);box.pack_start(self.hint,False,False,0)
         self.list=Gtk.ListBox();scroll=Gtk.ScrolledWindow();scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC)
@@ -40,7 +44,7 @@ class Dialog(Gtk.Window):
         self.create=Gtk.Button(label="Review and create…");self.create.connect("clicked",self.review)
         box.pack_end(self.create,False,False,0)
         self.refresh(0)
-        self.mode.connect("changed",self.change);self.show_all();self.mode.set_active_id("extract" if single else "combine")
+        self.mode.connect("changed",self.change);self.show_all();self.mode.set_active(0) if not single else self.mode.set_active_id("extract")
         if single:
             def check():
                 try:value=page_count(files[0])
@@ -62,6 +66,9 @@ class Dialog(Gtk.Window):
                "each":"Create a new folder containing one numbered PDF per page.",
                "left":"Turn every page counterclockwise by 90° in a new PDF.",
                "right":"Turn every page clockwise by 90° in a new PDF."}
+        hints["list"]="Write the selected filenames, in this order, to a new text file."
+        hints["zip"]="Package the selected files together without changing the originals."
+        for fmt in ("jpg","png","webp"):hints[fmt]="Convert each selected image into a new folder. Existing files are never overwritten."
         self.hint.set_text((f"{self.count} pages. " if self.count else "")+hints[k])
         self.range.set_placeholder_text("Example: 1-3;4-6" if k=="split" else "Example: 3,1-2")
 
@@ -94,7 +101,7 @@ class Dialog(Gtk.Window):
         if answer!=Gtk.ResponseType.YES:return
         self.busy=True;self.create.set_sensitive(False);self.mode.set_sensitive(False)
         self.order.set_sensitive(False);self.range.set_sensitive(False)
-        self.status.set_text("Creating PDF output…")
+        self.status.set_text("Creating output…")
         payload=json.dumps({"files":[str(f) for f in self.files],"op":k,"spec":spec})
         def worker():
             try:

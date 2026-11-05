@@ -9,11 +9,13 @@ import re
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from PIL import Image, ImageOps
 from convert import IMAGES
 
-OPS = {"combine", "extract", "split", "each", "left", "right"}
+BATCH = {"list", "zip", "png", "jpg", "webp"}
+OPS = BATCH | {"combine", "extract", "split", "each", "left", "right"}
 MAX_PAGES = 1000
 MAX_PARTS = 250
 
@@ -66,13 +68,13 @@ def qpdf(*args):
         raise ValueError("PDF processing failed. Check the source files; no result was published.")
 
 
-def publish(tmp, folder, name, directory=False):
+def publish(tmp, folder, name, directory=False, suffix=".pdf"):
     # Applies to files AND directories; never replace an existing user's output.
     rename = ctypes.CDLL(None, use_errno=True).renameat2
     rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
     for i in range(1,10001):
         extra = "" if i==1 else f" ({i})"
-        target = folder / (name + extra + ("" if directory else ".pdf"))
+        target = folder / (name + extra + ("" if directory else suffix))
         if not rename(-100,os.fsencode(tmp),-100,os.fsencode(target),1):
             return target
         code = ctypes.get_errno()
@@ -96,13 +98,45 @@ def execute(paths, op, spec=""):
     if op not in OPS or not 1<=len(files)<=100:
         raise ValueError("Select between 1 and 100 files.")
     for p in files:
-        if not p.is_file() or p.is_symlink() or p.suffix.lower()[1:] not in IMAGES|{"pdf"}:
-            raise ValueError("Choose regular local image or PDF files.")
+        if not p.is_file() or p.is_symlink() or (op not in ("zip","list") and p.suffix.lower()[1:] not in IMAGES|{"pdf"}):
+            raise ValueError("Choose regular local files supported by this action.")
     first=files[0]
-    if op!="combine" and (len(files)!=1 or first.suffix.lower()!=".pdf"):
+    if op not in BATCH | {"combine"} and (len(files)!=1 or first.suffix.lower()!=".pdf"):
         raise ValueError("Select a single PDF for page tools.")
     with TemporaryDirectory(prefix=".ii-pdf-",dir=first.parent) as stage:
         t=Path(stage); out=t/"result.pdf"
+        if op in BATCH:
+            if len(files)<2:raise ValueError("Select at least two files.")
+            if op=="list":
+                listing=t/"names.txt"
+                listing.write_text("".join(p.name.replace("\n","\\n")+"\n" for p in files),encoding="utf-8")
+                return publish(listing,first.parent,first.stem+" - file list",suffix=".txt")
+            if op=="zip":
+                archive=t/"archive.zip"
+                with ZipFile(archive,"x",compression=ZIP_DEFLATED,compresslevel=4) as z:
+                    used=set()
+                    for src in files:
+                        name=src.name; i=1
+                        while name.casefold() in used:
+                            i+=1;name=f"{src.stem} ({i}){src.suffix}"
+                        used.add(name.casefold());z.write(src,name)
+                return publish(archive,first.parent,first.stem+" - selection",suffix=".zip")
+            if any(p.suffix.lower()[1:] not in IMAGES for p in files):
+                raise ValueError("Select only images for batch conversion.")
+            folder=t/"copies";folder.mkdir()
+            for src in files:
+                with Image.open(src) as image:
+                    if image.width*image.height>40_000_000 or getattr(image,"n_frames",1)!=1:
+                        raise ValueError("Choose single-frame images under 40 megapixels.")
+                    rgba=ImageOps.exif_transpose(image).convert("RGBA")
+                    if op=="jpg":
+                        im=Image.new("RGB",rgba.size,"white");im.paste(rgba,mask=rgba.getchannel("A"))
+                    else:im=rgba
+                    dest=folder/(src.stem+"."+op);i=1
+                    while dest.exists():
+                        i+=1;dest=folder/f"{src.stem} ({i}).{op}"
+                    im.save(dest, **({"quality":93} if op!="png" else {}))
+            return publish(folder,first.parent,first.stem+" - "+op.upper()+" copies",True)
         if op=="combine":
             args=[];total=0
             for i,p in enumerate(files):

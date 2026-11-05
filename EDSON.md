@@ -43,9 +43,19 @@ PDF → editable DOCX or TXT extracts selectable text (not layout or OCR); PDF �
 
 ## Combine images, merge PDFs, and split pages
 
-In Dolphin, select your JPGs, PNGs, PDFs, or a mix. Right-click the selection and choose **Convert / PDF tools…**. The input list shows the exact page order; use **Move up / Move down**, then **Review and create… → Yes**. Images each contribute one page; PDF pages stay as PDF content. The output is saved beside the first input in the list.
+In Dolphin, select your JPGs, PNGs, PDFs, or a mix. Right-click the selection and choose **Actions for selected files…**. The input list shows the exact page order; use **Move up / Move down**, then **Review and create… → Yes**. Images each contribute one page; PDF pages stay as PDF content. The output is saved beside the first input in the list.
 
 For one PDF, Alt+click it and choose **PAGES** on the wheel. Extract or reorder pages with `3,1-2`; omit a page to leave it out. Split into groups with `1-3;4-6`, export each page separately, or rotate all pages left or right. Split jobs create a numbered set inside a new folder. Existing files aren't replaced. Locked PDFs are unsupported. Combining/extracting copies pages, not document-level items such as signatures and bookmarks. Requires libqpdf (Fedora: `qpdf-libs`).
+
+## Desktop recovery
+
+Open **Super+N → Desktop recovery** (top row), press **Super+Alt+Esc**, or run `~/.local/bin/ii-desktop-recovery` even when Quickshell is down. Check Hyprland and the ii IPC, restart the panel without logging out, create a verified working backup, or choose a backup to restore. The archives and sibling SHA-256 files live in `~/.local/state/ii-desktop-recovery/snapshots/` (or your XDG state directory). Keep them private and copy them to another drive for disk-failure protection.
+
+Snapshots cover Hyprland, the ii shell, desktop preferences, named theme and audio settings, generated colors, the Dolphin service menu and organizer timer links. They are desktop configuration backups, not backups of personal documents, wallpaper images, packages or keyrings. Restore replaces the covered settings, saves a private before-restore archive, and rolls back changed files if reloading fails. The independent recovery command stays installed if restoring a snapshot from before the button existed.
+
+## Multiple-file actions
+
+Ctrl-click to select two or more local regular files, then hold Alt and left-click **one of the selected files**. The action menu can archive any group of regular files or save their names to a text file. Images/PDFs can be combined into one PDF; image-only groups can also be converted to JPEG, PNG or WebP copies. Review the list and confirm before any output is created. The same action is available in Dolphin’s right-click menu.
 
 ## Downloads organizer
 
