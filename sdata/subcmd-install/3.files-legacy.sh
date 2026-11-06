@@ -19,6 +19,7 @@ case "${SKIP_MISCCONF}" in
     rsync_dir__ignore_existing "dots/.config/wireplumber/wireplumber.conf.d" "$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d"
     # Seed the optional translation without replacing settings or existing translations.
     rsync_dir__ignore_existing "dots/.config/illogical-impulse/translations" "$XDG_CONFIG_HOME/illogical-impulse/translations"
+    rsync_dir "dots/.local/share/kio/servicemenus" "$XDG_DATA_HOME/kio/servicemenus"
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole
     ;;
 esac

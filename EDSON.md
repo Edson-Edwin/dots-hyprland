@@ -35,6 +35,12 @@ Use the **microphone in the top bar → Settings** to configure transcription an
 
 The horizontal top bar uses one black background with no group pills. On an existing installation, enable **Borderless** and **Show background** in the bar settings to use this style.
 
+## Dolphin format wheel
+
+Alt+left-click one supported local file in Dolphin, or right-click it and select **Convert format…**. Choose a wedge, review the proposed output, and select **Yes, create copy**. Escape cancels. A numbered name is used if the destination already exists. The original is kept. Dolphin may need a new window to discover a newly installed service menu.
+
+PDF → editable DOCX or TXT extracts selectable text (not layout or OCR); PDF → PNG or JPEG renders the first page. Single-frame PNG, JPEG, WebP, BMP, GIF and TIFF images can be converted to PNG, JPEG, WebP or PDF. Unsupported targets aren't offered. The wheel is local and runs only when opened. It uses GTK 3, GTK Layer Shell, PyGObject, Cairo, Pillow, Python D-Bus, and Poppler utilities.
+
 ## Downloads organizer
 
 Open **Super+N → Downloads**. **Organize now** moves loose regular files in your XDG Downloads directory into extension folders (for example, `pdf/`, `jpg/`, or `tar.gz/`). Files without an extension go into `No extension/`. Existing directories, hidden files, symlinks, and recognized partial downloads are left alone. A name collision gets a numbered suffix; nothing is overwritten.

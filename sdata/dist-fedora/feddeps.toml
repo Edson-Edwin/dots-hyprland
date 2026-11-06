@@ -191,6 +191,12 @@ packages = [
 # Widgets
 [groups.widgets]
 packages = [
+  "gtk-layer-shell",
+  "python3-gobject",
+  "python3-cairo",
+  "python3-pillow",
+  "python3-dbus",
+  "poppler-utils",
   "python3-pyside6",
   "python3-requests",
   "python3-psutil",

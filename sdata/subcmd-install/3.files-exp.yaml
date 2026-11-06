@@ -22,6 +22,9 @@ patterns:
   - from: "dots/.config/wireplumber/wireplumber.conf.d"
     to: "$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d"
     mode: "soft"
+  - from: "dots/.local/share/kio/servicemenus/ii-format-wheel.desktop"
+    to: "$XDG_DATA_HOME/kio/servicemenus/ii-format-wheel.desktop"
+    mode: "hard"
   # Conditionally install these files
   - from: "dots/.config/fish"
     to: "$XDG_CONFIG_HOME/fish"

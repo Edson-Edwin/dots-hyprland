@@ -25,3 +25,11 @@ hl.on("monitor.added", function(m)
     end
 end)
 hl.on("hyprland.start", function() hl.exec_cmd(presentationCommand) end)
+
+-- Keep normal selection and Ctrl+click multi-select intact.
+hl.bind("ALT + mouse:272", function()
+    local active = hl.get_active_window()
+    if active and active.class == "org.kde.dolphin" then
+        hl.exec_cmd("/usr/bin/python3 ~/.config/hypr/hyprland/scripts/edson/format-wheel/gesture.py")
+    end
+end, { release = true, non_consuming = true, description = "Dolphin: convert selected file" })
