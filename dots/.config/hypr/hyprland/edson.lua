@@ -11,3 +11,5 @@ hl.window_rule({
     float = true, center = true, pin = true, decorate = false, border_size = 0,
     no_shadow = true, no_blur = false, dim_around = false, no_screen_share = true,
 })
+
+hl.bind("SUPER + ALT + P", hl.dsp.exec_cmd("python3 ~/.config/hypr/hyprland/scripts/edson/mirror-fit.py"), { description = "Mirror full-screen to external display or extend" })

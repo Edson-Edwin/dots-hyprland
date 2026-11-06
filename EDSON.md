@@ -20,6 +20,7 @@ The Fedora dependency list includes PySide6 and requests for Voice & Chat, psuti
 
 | Shortcut | Action |
 |---|---|
+| Super+Alt+P | Fill the chosen external display when mirroring; press again to extend. |
 | Super+B | Open System / Anime as a sliding left panel, even after detaching it. |
 | Super+N | Open the right sidebar. Nearby Wi-Fi refreshes while the list is open. |
 | Super+F6 | Choose a preset, restore the previous palette, or use wallpaper colors. |
@@ -46,3 +47,5 @@ From the repository root, the checks below cover process/port parsing, thumbnail
 ```sh
 for t in tests/edson/test_*.py; do /usr/bin/python3 "$t" || exit 1; done
 ```
+
+Mirroring renders at the external display’s preferred mode. The laptop can have bars if its aspect ratio differs. With several external outputs, select which one to fill. This shortcut makes session-only changes; it does not overwrite your saved extended layout.
