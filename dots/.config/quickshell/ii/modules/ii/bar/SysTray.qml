@@ -94,7 +94,7 @@ Item {
                 iconSize: Appearance.font.pixelSize.larger
                 text: "expand_more"
                 horizontalAlignment: Text.AlignHCenter
-                color: root.trayOverflowOpen ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer2
+                color: root.trayOverflowOpen ? Appearance.colors.colOnSecondaryContainer : Appearance.barForeground(Appearance.colors.colOnLayer2)
                 rotation: (root.trayOverflowOpen ? 180 : 0) - (90 * root.vertical) + (180 * root.invertSide)
                 Behavior on rotation {
                     animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
@@ -149,7 +149,7 @@ Item {
         StyledText {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
             font.pixelSize: Appearance.font.pixelSize.larger
-            color: Appearance.colors.colSubtext
+            color: Appearance.barForeground(Appearance.colors.colSubtext, "#aaaaaa")
             text: "•"
             visible: root.showSeparator && SystemTray.items.values.length > 0
         }

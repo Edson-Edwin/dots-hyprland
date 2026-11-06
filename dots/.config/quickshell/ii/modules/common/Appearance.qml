@@ -6,6 +6,10 @@ pragma ComponentBehavior: Bound
 
 Singleton {
     id: root
+    readonly property bool flatBlackBar: Config.options.bar.borderless && Config.options.bar.showBackground && !Config.options.bar.vertical
+    function barForeground(normal, fallback = "#ececec") {
+        return flatBlackBar && !m3colors.darkmode ? fallback : normal;
+    }
     property QtObject m3colors
     property QtObject animation
     property QtObject animationCurves

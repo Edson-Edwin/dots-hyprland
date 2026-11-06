@@ -32,6 +32,8 @@ In **System**, view CPU, RAM, swap, disk and network graphs, processes, and loca
 
 Use the **microphone in the top bar → Settings** to configure transcription and chat independently. Chat supports OpenAI-compatible, Gemini and Anthropic request formats; dictation supports OpenAI-compatible and Gemini transcription. Pick a supported format, base URL and model for each. Keys are entered locally and stored via Secret Service. Chat can only return text; it has no tools or command actions. Dictation sends recorded audio to the configured service. Supported Hyprland captures redact this overlay with a black rectangle.
 
+The horizontal top bar uses one black background with no group pills. On an existing installation, enable **Borderless** and **Show background** in the bar settings to use this style.
+
 ## Where the changes live
 
 - `dots/.config/hypr/hyprland/edson.lua`: edition shortcuts and capture rules.

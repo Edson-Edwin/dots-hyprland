@@ -21,7 +21,7 @@ RippleButton {
         anchors.centerIn: parent
         text: root.recording ? "stop_circle" : root.voiceState === "transcribing" ? "hourglass_top" : "mic"
         iconSize: 21
-        color: root.recording ? Appearance.m3colors.m3onErrorContainer : Appearance.colors.colOnLayer0
+        color: root.recording ? Appearance.m3colors.m3onErrorContainer : Appearance.barForeground(Appearance.colors.colOnLayer0)
     }
     StyledToolTip {
         text: root.recording ? "Stop dictation · Ctrl + Super + D" : "Voice & Chat · Dictate: Ctrl + Super + D · Chat: Ctrl + Super + A"

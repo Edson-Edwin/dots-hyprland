@@ -63,7 +63,7 @@ Item {
             StyledText {
                 id: percentageText
                 anchors.centerIn: parent
-                color: Appearance.colors.colOnLayer1
+                color: Appearance.barForeground(Appearance.colors.colOnLayer1)
                 font.pixelSize: Appearance.font.pixelSize.small
                 text: `${Math.round(percentage * 100).toString()}`
             }

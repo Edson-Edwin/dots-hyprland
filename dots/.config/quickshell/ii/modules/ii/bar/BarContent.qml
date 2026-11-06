@@ -41,7 +41,7 @@ Item { // Bar content region
             fill: parent
             margins: Config.options.bar.cornerStyle === 1 ? (Appearance.sizes.hyprlandGapsOut) : 0 // idk why but +1 is needed
         }
-        color: Config.options.bar.showBackground ? Appearance.colors.colLayer0 : "transparent"
+        color: Config.options.bar.showBackground ? (Appearance.flatBlackBar ? "#000000" : Appearance.colors.colLayer0) : "transparent"
         radius: Config.options.bar.cornerStyle === 1 ? Appearance.rounding.windowRounding : 0
         border.width: Config.options.bar.cornerStyle === 1 ? 1 : 0
         border.color: Appearance.colors.colLayer0Border
@@ -125,7 +125,7 @@ Item { // Bar content region
         }
 
         VerticalBarSeparator {
-            visible: Config.options?.bar.borderless
+            visible: Config.options?.bar.borderless && !Appearance.flatBlackBar
         }
 
         BarGroup {
@@ -151,7 +151,7 @@ Item { // Bar content region
         }
 
         VerticalBarSeparator {
-            visible: Config.options?.bar.borderless
+            visible: Config.options?.bar.borderless && !Appearance.flatBlackBar
         }
 
         MouseArea {
@@ -242,7 +242,7 @@ Item { // Bar content region
                 colBackgroundToggledHover: Appearance.colors.colSecondaryContainerHover
                 colRippleToggled: Appearance.colors.colSecondaryContainerActive
                 toggled: GlobalStates.sidebarRightOpen
-                property color colText: toggled ? Appearance.m3colors.m3onSecondaryContainer : Appearance.colors.colOnLayer0
+                property color colText: toggled ? Appearance.m3colors.m3onSecondaryContainer : Appearance.barForeground(Appearance.colors.colOnLayer0)
 
                 Behavior on colText {
                     animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)

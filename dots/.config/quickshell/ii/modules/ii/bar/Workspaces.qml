@@ -96,7 +96,7 @@ ButtonMouseArea {
             id: occupiedIndicatorsBg
             anchors.fill: parent
             contentLayer: StyledRectangle.ContentLayer.Group
-            color: ColorUtils.transparentize(Appearance.m3colors.m3secondaryContainer, 0.4)
+            color: Appearance.flatBlackBar ? "transparent" : ColorUtils.transparentize(Appearance.m3colors.m3secondaryContainer, 0.4)
             visible: false
         }
 
@@ -369,7 +369,7 @@ ButtonMouseArea {
         id: wsNum
         property bool hasBiggestWindow: !!wsModel.biggestWindow[index]
         property int wsId: wsModel.getWorkspaceIdAt(index)
-        property color contentColor: (wsModel.occupied[wsNum.index] && wsId !== wsModel.fakeWorkspace) ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1Inactive
+        property color contentColor: (wsModel.occupied[wsNum.index] && wsId !== wsModel.fakeWorkspace) ? Appearance.colors.colOnSecondaryContainer : Appearance.barForeground(Appearance.colors.colOnLayer1Inactive, "#aaaaaa")
         property bool showingNumbers: {
             if (root.superPressAndHeld)
                 return true;
