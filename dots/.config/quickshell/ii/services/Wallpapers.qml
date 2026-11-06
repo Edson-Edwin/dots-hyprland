@@ -15,7 +15,6 @@ pragma ComponentBehavior: Bound
 Singleton {
     id: root
 
-    property string thumbgenScriptPath: `${FileUtils.trimFileProtocol(Directories.scriptPath)}/thumbnails/thumbgen-venv.sh`
     property string generateThumbnailsMagickScriptPath: `${FileUtils.trimFileProtocol(Directories.scriptPath)}/thumbnails/generate-thumbnails-magick.sh`
     property alias directory: folderModel.folder
     readonly property string effectiveDirectory: FileUtils.trimFileProtocol(folderModel.folder.toString())
@@ -83,22 +82,22 @@ Singleton {
             if (/^\/*$/.test(validateDirProc.nicePath)) validateDirProc.nicePath = "/";
             validateDirProc.exec([
                 "bash", "-c",
-                `if [ -d "${validateDirProc.nicePath}" ]; then echo dir; elif [ -f "${validateDirProc.nicePath}" ]; then echo file; else echo invalid; fi`
+                'if [ -d "$1" ]; then echo dir; elif [ -f "$1" ]; then echo file; else echo invalid; fi',
+                "ii-validate-directory", validateDirProc.nicePath
             ])
         }
         stdout: StdioCollector {
             onStreamFinished: {
-                    root.directory = Qt.resolvedUrl(validateDirProc.nicePath)
-                const result = text.trim()
+                const result = text.trim();
                 if (result === "dir") {
+                    root.directory = Qt.resolvedUrl(validateDirProc.nicePath);
                 } else if (result === "file") {
-                    root.directory = Qt.resolvedUrl(FileUtils.parentDirectory(validateDirProc.nicePath))
-                } else {
-                    // Ignore
+                    root.directory = Qt.resolvedUrl(FileUtils.parentDirectory(validateDirProc.nicePath));
                 }
             }
         }
     }
+
     function setDirectory(path) {
         validateDirProc.setDirectoryIfValid(path)
     }
@@ -133,17 +132,40 @@ Singleton {
     }
 
     // Thumbnail generation
+    property string pendingThumbnailDirectory: ""
+    property string pendingThumbnailSize: "large"
+
+    function cancelThumbnailGeneration() {
+        pendingThumbnailDirectory = "";
+        thumbnailDebounce.stop();
+        thumbgenProc.running = false;
+    }
+
     function generateThumbnail(size: string) {
         if (!["normal", "large", "x-large", "xx-large"].includes(size)) throw new Error("Invalid thumbnail size");
-        thumbgenProc.directory = root.directory
-        thumbgenProc.running = false
-        thumbgenProc.command = [
-            "bash", "-c",
-            `${thumbgenScriptPath} --size ${size} --machine_progress -d ${FileUtils.trimFileProtocol(root.directory)} || ${generateThumbnailsMagickScriptPath} --size ${size} -d ${FileUtils.trimFileProtocol(root.directory)}`,
-        ]
-        // console.log("[Wallpapers] Updating thumbnails with command ", thumbgenProc.command.join(" "))
-        root.thumbnailGenerationProgress = 0
-        thumbgenProc.running = true
+        pendingThumbnailDirectory = root.effectiveDirectory;
+        pendingThumbnailSize = size;
+        thumbnailDebounce.restart();
+    }
+
+    Timer {
+        id: thumbnailDebounce
+        interval: 180
+        onTriggered: {
+            if (thumbgenProc.running) {
+                thumbgenProc.running = false;
+                // Start the latest request only after the old child has exited.
+                return;
+            }
+            if (!root.pendingThumbnailDirectory) return;
+            thumbgenProc.directory = root.pendingThumbnailDirectory;
+            thumbgenProc.command = ["bash", root.generateThumbnailsMagickScriptPath,
+                "--size", root.pendingThumbnailSize, "--machine_progress",
+                "--directory", root.pendingThumbnailDirectory];
+            root.pendingThumbnailDirectory = "";
+            root.thumbnailGenerationProgress = 0;
+            thumbgenProc.running = true;
+        }
     }
     Process {
         id: thumbgenProc
@@ -166,7 +188,8 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             // print("[Wallpapers] Thumbnail generation completed with exit code", exitCode)
-            root.thumbnailGenerated(thumbgenProc.directory)
+            root.thumbnailGenerated(thumbgenProc.directory);
+            if (root.pendingThumbnailDirectory) thumbnailDebounce.restart();
         }
     }
 

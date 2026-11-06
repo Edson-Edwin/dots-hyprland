@@ -35,7 +35,7 @@ Scope {
     PanelLoader { component: OnScreenKeyboard {} }
     PanelLoader { component: Overlay {} }
     PanelLoader { component: Overview {} }
-    PanelLoader { component: Polkit {} }
+    PanelLoader { extraCondition: Quickshell.env("II_KDE_POLKIT") !== "1"; component: Polkit {} }
     PanelLoader { component: RegionSelector {} }
     PanelLoader { component: ScreenCorners {} }
     PanelLoader { component: ScreenTranslator {} }

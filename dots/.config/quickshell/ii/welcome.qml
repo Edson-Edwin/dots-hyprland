@@ -1,3 +1,7 @@
+// Keep KDE's icon loader out of the QQuickPixmapReader worker (crash workaround).
+//@ pragma Env QT_QPA_PLATFORMTHEME=gtk3
+//@ pragma Env QT_STYLE_OVERRIDE=Fusion
+//@ pragma IconTheme Papirus-Dark
 //@ pragma UseQApplication
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 //@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic

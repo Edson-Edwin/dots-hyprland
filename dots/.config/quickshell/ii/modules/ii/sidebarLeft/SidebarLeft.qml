@@ -15,6 +15,20 @@ Scope { // Scope
     property Component contentComponent: SidebarLeftContent {}
     property Item sidebarContent
 
+    function openSidebar() {
+        // Normal open actions always restore the left-edge layer panel.
+        root.detach = false;
+        GlobalStates.sidebarLeftOpen = true;
+    }
+
+    function toggleSidebar() {
+        if (root.detach || !GlobalStates.sidebarLeftOpen) {
+            root.openSidebar();
+        } else {
+            GlobalStates.sidebarLeftOpen = false;
+        }
+    }
+
     function toggleDetach() {
         root.detach = !root.detach;
     }
@@ -204,7 +218,7 @@ Scope { // Scope
         target: "sidebarLeft"
 
         function toggle(): void {
-            GlobalStates.sidebarLeftOpen = !GlobalStates.sidebarLeftOpen
+            root.toggleSidebar()
         }
 
         function close(): void {
@@ -212,7 +226,7 @@ Scope { // Scope
         }
 
         function open(): void {
-            GlobalStates.sidebarLeftOpen = true
+            root.openSidebar()
         }
     }
 
@@ -221,7 +235,7 @@ Scope { // Scope
         description: "Toggles left sidebar on press"
 
         onPressed: {
-            GlobalStates.sidebarLeftOpen = !GlobalStates.sidebarLeftOpen;
+            root.toggleSidebar();
         }
     }
 
@@ -230,7 +244,7 @@ Scope { // Scope
         description: "Opens left sidebar on press"
 
         onPressed: {
-            GlobalStates.sidebarLeftOpen = true;
+            root.openSidebar();
         }
     }
 

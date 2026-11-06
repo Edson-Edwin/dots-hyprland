@@ -16,6 +16,9 @@ patterns:
   - from: "dots/.config/quickshell/ii"
     to: "$XDG_CONFIG_HOME/quickshell/ii"
     mode: "sync"
+  - from: "dots/.config/illogical-impulse/translations"
+    to: "$XDG_CONFIG_HOME/illogical-impulse/translations"
+    mode: "soft"
   # Conditionally install these files
   - from: "dots/.config/fish"
     to: "$XDG_CONFIG_HOME/fish"

@@ -25,6 +25,13 @@ WindowDialog {
         Layout.leftMargin: -Appearance.rounding.large
         Layout.rightMargin: -Appearance.rounding.large
     }
+    StyledText {
+        visible: Network.wifiScanError.length > 0
+        Layout.fillWidth: true
+        wrapMode: Text.Wrap
+        font.pixelSize: Appearance.font.pixelSize.small
+        text: Network.wifiScanError
+    }
     ListView {
         Layout.fillHeight: true
         Layout.fillWidth: true
@@ -59,6 +66,11 @@ WindowDialog {
             Layout.fillWidth: true
         }
 
+        DialogButton {
+            buttonText: Network.wifiScanning ? Translation.tr("Scanning…") : Translation.tr("Refresh")
+            enabled: Network.wifiEnabled && !Network.wifiScanning && !Network.wifiConnecting
+            onClicked: Network.rescanWifi()
+        }
         DialogButton {
             buttonText: Translation.tr("Done")
             onClicked: root.dismiss()

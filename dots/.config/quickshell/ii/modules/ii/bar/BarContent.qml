@@ -317,6 +317,11 @@ Item { // Bar content region
                 }
             }
 
+            VoiceAiButton {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.fillWidth: false
+            }
+
             SysTray {
                 visible: root.useShortenedForm === 0
                 Layout.fillWidth: false

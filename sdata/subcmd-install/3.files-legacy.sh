@@ -8,13 +8,15 @@
 case "${SKIP_MISCCONF}" in
   true) true;;
   *)
-    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' -exec basename {} \;); do
+    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'illogical-impulse' -exec basename {} \;); do
 #      i="dots/.config/$i"
       echo "[$0]: Found target: dots/.config/$i"
       if [ -d "dots/.config/$i" ];then install_dir__sync "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
       elif [ -f "dots/.config/$i" ];then install_file "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
       fi
     done
+    # Seed the optional translation without replacing settings or existing translations.
+    rsync_dir__ignore_existing "dots/.config/illogical-impulse/translations" "$XDG_CONFIG_HOME/illogical-impulse/translations"
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole
     ;;
 esac
@@ -68,9 +70,6 @@ case "${SKIP_HYPRLAND}" in
         install_file__auto_backup "dots/.config/hypr/$i" "${XDG_CONFIG_HOME}/hypr/$i"
       fi
     done
-    if [ "$OS_GROUP_ID" = "fedora" ];then
-      v bash -c "printf \"# For fedora to setup polkit\nexec-once = /usr/libexec/kf6/polkit-kde-authentication-agent-1\n\" >> ${XDG_CONFIG_HOME}/hypr/hyprland/execs.conf"
-    fi
 
     install_dir__ignore_existing "dots/.config/hypr/custom" "${XDG_CONFIG_HOME}/hypr/custom"
     ;;

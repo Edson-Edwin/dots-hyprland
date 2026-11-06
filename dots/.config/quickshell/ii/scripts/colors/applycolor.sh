@@ -21,8 +21,8 @@ colorstrings=''
 colorlist=()
 colorvalues=()
 
-colornames=$(cat $STATE_DIR/user/generated/material_colors.scss | cut -d: -f1)
-colorstrings=$(cat $STATE_DIR/user/generated/material_colors.scss | cut -d: -f2 | cut -d ' ' -f2 | cut -d ";" -f1)
+colornames=$(cat "$STATE_DIR/user/generated/material_colors.scss" | cut -d: -f1)
+colorstrings=$(cat "$STATE_DIR/user/generated/material_colors.scss" | cut -d: -f2 | cut -d ' ' -f2 | cut -d ";" -f1)
 IFS=$'\n'
 colorlist=($colornames)     # Array of color names
 colorvalues=($colorstrings) # Array of color values
@@ -41,11 +41,13 @@ apply_kitty() {
     sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
   done
 
-  # Reload
-  if ! pgrep -f kitty >/dev/null; then
-    return
-  fi
-  kill -SIGUSR1 $(pidof kitty)
+  # Reload only this user's Kitty processes through Kitty's config API.
+  # Never write color sequences into another application's terminal stream.
+  local kitty_pid
+  while IFS= read -r kitty_pid; do
+    [[ "$kitty_pid" =~ ^[0-9]+$ ]] || continue
+    kill -SIGUSR1 "$kitty_pid" 2>/dev/null || true
+  done < <(pgrep -u "$UID" -x kitty || true)
 }
 
 apply_anyterm() {
@@ -64,18 +66,14 @@ apply_anyterm() {
 
   sed -i "s/\$alpha/$term_alpha/g" "$STATE_DIR/user/generated/terminal/sequences.txt"
 
-  for file in /dev/pts/*; do
-    if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then
-      {
-      cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"
-      } & disown || true
-    fi
-  done
+  # Keep the generated sequences for explicitly opted-in interactive shells.
+  # Broadcasting to /dev/pts also injects raw OSC data into app/tool output.
+
 }
 
 apply_term() {
-  apply_anyterm &
-  apply_kitty &
+  apply_anyterm
+  apply_kitty
 }
 
 # Check if terminal theming is enabled in config
@@ -83,11 +81,11 @@ CONFIG_FILE="$XDG_CONFIG_HOME/illogical-impulse/config.json"
 if [ -f "$CONFIG_FILE" ]; then
   enable_terminal=$(jq -r '.appearance.wallpaperTheming.enableTerminal' "$CONFIG_FILE")
   if [ "$enable_terminal" = "true" ]; then
-    apply_term &
+    apply_term
   fi
 else
   echo "Config file not found at $CONFIG_FILE. Applying terminal theming by default."
-  apply_term &
+  apply_term
 fi
 
 # apply_qt & # Qt theming is already handled by kde-material-colors

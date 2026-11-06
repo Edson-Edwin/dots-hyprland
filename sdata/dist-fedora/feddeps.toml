@@ -191,6 +191,12 @@ packages = [
 # Widgets
 [groups.widgets]
 packages = [
+  "python3-pyside6",
+  "python3-requests",
+  "python3-psutil",
+  "plasma-workspace",
+  "libsecret",
+  "pipewire-utils",
   "fuzzel",
   "glib2",
   "ImageMagick",

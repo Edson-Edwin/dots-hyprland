@@ -349,7 +349,7 @@ Item {
                     padding: 10
                     color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
                     renderType: Text.NativeRendering
-                    placeholderText: Translation.tr('Enter tags, or "%1" for commands').arg(root.commandPrefix)
+                    placeholderText: Translation.tr('Enter tags, or "%1" for commands').arg(root?.commandPrefix ?? "/")
 
                     background: null
 
@@ -493,7 +493,7 @@ Item {
                     text: Booru.providers[Booru.currentProvider].name
                     tooltipText: Translation.tr("Current API endpoint: %1\nSet it with %2mode PROVIDER")
                         .arg(Booru.providers[Booru.currentProvider].url)
-                        .arg(root.commandPrefix)
+                        .arg(root?.commandPrefix ?? "/")
                 }
 
                 StyledText {

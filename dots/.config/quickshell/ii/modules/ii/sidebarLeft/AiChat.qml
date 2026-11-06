@@ -63,7 +63,7 @@ Item {
             execute: args => {
                 // console.log(args)
                 if (args.length == 0 || args[0] == "get") {
-                    Ai.addMessage(Translation.tr("Usage: %1tool TOOL_NAME").arg(root.commandPrefix), Ai.interfaceRole);
+                    Ai.addMessage(Translation.tr("Usage: %1tool TOOL_NAME").arg(root?.commandPrefix ?? "/"), Ai.interfaceRole);
                 } else {
                     const tool = args[0];
                     const switched = Ai.setTool(tool);
@@ -101,7 +101,7 @@ Item {
             execute: args => {
                 const joinedArgs = args.join(" ");
                 if (joinedArgs.trim().length == 0) {
-                    Ai.addMessage(Translation.tr("Usage: %1save CHAT_NAME").arg(root.commandPrefix), Ai.interfaceRole);
+                    Ai.addMessage(Translation.tr("Usage: %1save CHAT_NAME").arg(root?.commandPrefix ?? "/"), Ai.interfaceRole);
                     return;
                 }
                 Ai.saveChat(joinedArgs);
@@ -113,7 +113,7 @@ Item {
             execute: args => {
                 const joinedArgs = args.join(" ");
                 if (joinedArgs.trim().length == 0) {
-                    Ai.addMessage(Translation.tr("Usage: %1load CHAT_NAME").arg(root.commandPrefix), Ai.interfaceRole);
+                    Ai.addMessage(Translation.tr("Usage: %1load CHAT_NAME").arg(root?.commandPrefix ?? "/"), Ai.interfaceRole);
                     return;
                 }
                 Ai.loadChat(joinedArgs);
@@ -517,7 +517,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         wrapMode: TextArea.Wrap
                         padding: 10
                         color: activeFocus ? Appearance.m3colors.m3onSurface : Appearance.m3colors.m3onSurfaceVariant
-                        placeholderText: Translation.tr('Message the model... "%1" for commands').arg(root.commandPrefix)
+                        placeholderText: Translation.tr('Message the model... "%1" for commands').arg(root?.commandPrefix ?? "/")
 
                         background: null
 
@@ -750,14 +750,14 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     // Model indicator
                     icon: "api"
                     text: Ai.getModel().name
-                    tooltipText: Translation.tr("Current model: %1\nSet it with %2model MODEL").arg(Ai.getModel().name).arg(root.commandPrefix)
+                    tooltipText: Translation.tr("Current model: %1\nSet it with %2model MODEL").arg(Ai.getModel().name).arg(root?.commandPrefix ?? "/")
                 }
 
                 ApiInputBoxIndicator {
                     // Tool indicator
                     icon: "service_toolbox"
                     text: Ai.currentTool.charAt(0).toUpperCase() + Ai.currentTool.slice(1)
-                    tooltipText: Translation.tr("Current tool: %1\nSet it with %2tool TOOL").arg(Ai.currentTool).arg(root.commandPrefix)
+                    tooltipText: Translation.tr("Current tool: %1\nSet it with %2tool TOOL").arg(Ai.currentTool).arg(root?.commandPrefix ?? "/")
                 }
 
                 Item {

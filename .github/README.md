@@ -1,3 +1,11 @@
+# Edson’s Hyprland desktop
+
+A Fedora-focused edition of [end-4’s Illogical Impulse](https://github.com/end-4/dots-hyprland). It adds a live system sidebar, seven theme presets, KDE KRunner, and optional voice typing and chat. The theme and shell remain usable without an AI account.
+
+[Edition guide: install, shortcuts, providers and tests](../EDSON.md)
+
+---
+
 <div align="center">
     <h1>【 end_4's Hyprland dotfiles 】</h1>
     <h3></h3>

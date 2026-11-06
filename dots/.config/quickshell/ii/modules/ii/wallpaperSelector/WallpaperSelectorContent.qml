@@ -12,6 +12,8 @@ import Quickshell.Io
 
 MouseArea {
     id: root
+    Component.onDestruction: Wallpapers.cancelThumbnailGeneration()
+
     property int columns: 4
     property real previewCellAspectRatio: 4 / 3
     property bool useDarkMode: Appearance.m3colors.darkmode

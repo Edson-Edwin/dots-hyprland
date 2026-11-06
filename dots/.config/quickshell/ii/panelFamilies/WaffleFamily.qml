@@ -32,7 +32,7 @@ Scope {
     PanelLoader { component: WaffleNotificationPopup {} }
     PanelLoader { component: WaffleOSD {} }
     // PanelLoader { component: WaffleOverlay {} }
-    PanelLoader { component: WafflePolkit {} }
+    PanelLoader { extraCondition: Quickshell.env("II_KDE_POLKIT") !== "1"; component: WafflePolkit {} }
     PanelLoader { component: WScreenSnip {} }
     PanelLoader { component: WaffleStartMenu {} }
     PanelLoader { component: WaffleSessionScreen {} }

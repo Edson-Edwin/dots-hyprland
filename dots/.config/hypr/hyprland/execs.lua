@@ -1,5 +1,9 @@
 -- put former exec-once commands inside the func and former exec commands outside
+local kde_agent = "/usr/libexec/kf6/polkit-kde-authentication-agent-1"
+local use_kde_agent = is_file_exists(kde_agent)
+hl.env("II_KDE_POLKIT", use_kde_agent and "1" or "0")
 hl.on("hyprland.start", function ()
+    if use_kde_agent then hl.exec_cmd(kde_agent) end
 
     -- Bar, wallpaper
     hl.exec_cmd("$HOME/.config/hypr/hyprland/scripts/start_geoclue_agent.sh")

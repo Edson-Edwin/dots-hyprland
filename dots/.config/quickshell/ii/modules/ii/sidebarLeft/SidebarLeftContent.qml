@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -12,19 +13,18 @@ Item {
     required property var scopeRoot
     property int sidebarPadding: 10
     anchors.fill: parent
-    property bool aiChatEnabled: Config.options.policies.ai !== 0
     property bool translatorEnabled: Config.options.sidebar.translator.enable
     property bool animeEnabled: Config.options.policies.weeb !== 0
     property bool animeCloset: Config.options.policies.weeb === 2
     property var tabButtonList: [
-        ...(root.aiChatEnabled ? [{"icon": "neurology", "name": Translation.tr("Intelligence")}] : []),
+        {"icon": "monitoring", "name": Translation.tr("System")},
         ...(root.translatorEnabled ? [{"icon": "translate", "name": Translation.tr("Translator")}] : []),
         ...((root.animeEnabled && !root.animeCloset) ? [{"icon": "bookmark_heart", "name": Translation.tr("Anime")}] : [])
     ]
     property int tabCount: swipeView.count
 
     function focusActiveItem() {
-        swipeView.currentItem.forceActiveFocus()
+        if (swipeView.currentItem) swipeView.currentItem.forceActiveFocus()
     }
 
     Keys.onPressed: (event) => {
@@ -84,17 +84,16 @@ Item {
                 }
 
                 contentChildren: [
-                    ...(root.aiChatEnabled ? [aiChat.createObject()] : []),
+                    systemMonitor.createObject(),
                     ...(root.translatorEnabled ? [translator.createObject()] : []),
-                    ...((root.tabButtonList.length === 0 || (!root.aiChatEnabled && !root.translatorEnabled && root.animeCloset)) ? [placeholder.createObject()] : []),
                     ...(root.animeEnabled ? [anime.createObject()] : []),
                 ]
             }
         }
 
         Component {
-            id: aiChat
-            AiChat {}
+            id: systemMonitor
+            SystemMonitor { active: GlobalStates.sidebarLeftOpen && SwipeView.isCurrentItem }
         }
         Component {
             id: translator

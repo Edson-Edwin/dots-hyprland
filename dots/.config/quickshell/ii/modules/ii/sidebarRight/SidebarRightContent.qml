@@ -2,6 +2,7 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -69,6 +70,16 @@ Item {
                 // Layout.margins: 10
                 Layout.topMargin: 5
                 Layout.bottomMargin: 0
+            }
+
+            DialogButton {
+                Layout.fillWidth: true
+                buttonText: Translation.tr("Themes") + "  ·  Super+F6"
+                onClicked: {
+                    GlobalStates.sidebarRightOpen = false;
+                    Quickshell.execDetached(["python3", FileUtils.trimFileProtocol(Directories.config)
+                        + "/hypr/hyprland/scripts/edson/ii-themes.py"]);
+                }
             }
 
             Loader {
@@ -148,9 +159,16 @@ Item {
         dialog: WifiDialog {}
         onShownChanged: {
             if (!shown) return;
-            Network.enableWifi();
-            Network.rescanWifi();
+            if (Network.wifiEnabled) Network.rescanWifi();
+            else Network.enableWifi();
         }
+    }
+
+    Timer {
+        interval: 10000
+        repeat: true
+        running: root.showWifiDialog && GlobalStates.sidebarRightOpen && Network.wifiEnabled
+        onTriggered: Network.rescanWifi()
     }
 
     component ToggleDialog: Loader {
@@ -268,7 +286,7 @@ Item {
                 toggled: false
                 buttonIcon: "restart_alt"
                 onClicked: {
-                    Quickshell.execDetached(["hyprctl", "reload"])
+                    Quickshell.execDetached(["hyprctl", "reload"]);
                     Quickshell.reload(true);
                 }
                 StyledToolTip {

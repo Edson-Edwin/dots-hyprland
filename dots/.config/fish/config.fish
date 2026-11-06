@@ -12,9 +12,12 @@ if status is-interactive
         enable_transience
     end
     
-    # Colors
-    if test -f ~/.local/state/quickshell/user/generated/terminal/sequences.txt
-        cat ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+    # Kitty reloads its generated config directly. Other compatible terminals
+    # may explicitly opt in to startup OSC colors; never emit them into pipes.
+    if set -q II_TERMINAL_OSC_COLORS; and test "$II_TERMINAL_OSC_COLORS" = 1; and isatty stdout
+        if test -f ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+            cat ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+        end
     end
 
     # Aliases
