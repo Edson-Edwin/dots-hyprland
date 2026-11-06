@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Fill an external display when mirroring. Only change live monitor rules."""
+import argparse
+import fcntl
 import json
+import os
+from pathlib import Path
 import subprocess
 import sys
 import time
@@ -38,15 +42,30 @@ def until(check):
     raise RuntimeError("Hyprland did not confirm the requested display layout.")
 
 
-def apply():
+def apply(auto=False, connector=None):
     active = outputs()
     laptop = next((name for name in active if name.startswith(("eDP", "LVDS", "DSI"))), None)
     if not laptop:
-        return "No active built-in laptop display."
+        return None if auto else "No active built-in laptop display."
     external = [name for name in active if name != laptop and not name.startswith(("HEADLESS", "FALLBACK"))]
     if not external:
-        return "Connect an external display first. Your layout was not changed."
-    if len(external) == 1:
+        return None if auto else "Connect an external display first. Your layout was not changed."
+    if auto:
+        # No chooser on connect/login. Leave an ongoing presentation alone when
+        # a second output arrives. An ambiguous initial setup stays as saved.
+        if connector is not None and connector not in external:
+            return None
+        if mirror(active[laptop]) and active[laptop]["mirrorOf"] in external:
+            target = active[laptop]["mirrorOf"]
+            if connector and connector != target:
+                return None
+        elif connector:
+            target = connector
+        elif len(external) == 1:
+            target = external[0]
+        else:
+            return None
+    elif len(external) == 1:
         target = external[0]
     else:
         choice = subprocess.run(["fuzzel", "--dmenu", "--keyboard-focus=exclusive",
@@ -56,7 +75,7 @@ def apply():
             return None
         target = choice.stdout.strip()
 
-    if active[laptop].get("mirrorOf") == target:
+    if not auto and active[laptop].get("mirrorOf") == target:
         ctl("reload")  # Restore the saved extended layout, including positions and timings.
         extended = lambda a: laptop in a and target in a and not mirror(a[laptop]) and not mirror(a[target])
         try:
@@ -73,19 +92,29 @@ def apply():
 
     try:
         # The external must stop mirroring before it can become the source.
-        ctl("eval", rule(active[target]))
+        ctl("eval", rule(active[target], position="0x0" if len(external) == 1 else None))
         until(lambda a: target in a and not mirror(a[target]))
         ctl("eval", rule(active[laptop], target))
         until(lambda a: laptop in a and a[laptop].get("mirrorOf") == target)
     except (RuntimeError, subprocess.SubprocessError):
         ctl("reload")
         raise
-    return f"Mirroring at {target}’s preferred mode. Press the shortcut again to extend."
+    display = outputs().get(target)
+    if not display:
+        return None
+    return f"{target}: {display['width']}×{display['height']}. Press Super+Alt+P to extend."
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--auto", action="store_true", help="mirror on connection; never toggle back to extend")
+    parser.add_argument("connector", nargs="?")
+    args = parser.parse_args()
     try:
-        message = apply()
+        # Login and hot-plug events can coincide. Serialize short-lived workers.
+        with (Path(os.environ["XDG_RUNTIME_DIR"]) / "edson-display-layout.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            message = apply(args.auto, args.connector)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as err:
         message = f"Display change failed: {err}"
         print(message, file=sys.stderr)

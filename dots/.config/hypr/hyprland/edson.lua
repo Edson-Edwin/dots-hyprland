@@ -13,3 +13,15 @@ hl.window_rule({
 })
 
 hl.bind("SUPER + ALT + P", hl.dsp.exec_cmd("python3 ~/.config/hypr/hyprland/scripts/edson/mirror-fit.py"), { description = "Mirror full-screen to external display or extend" })
+
+-- Use the connected display's advertised preferred mode for presentations.
+-- Listen to physical hot-plug and login, not layout changes caused by our own rules.
+local presentationCommand = "python3 ~/.config/hypr/hyprland/scripts/edson/mirror-fit.py --auto"
+hl.on("monitor.added", function(m)
+    local name = m.name
+    if name and name:match("^[%w_.%-]+$") and not name:match("^eDP") and not name:match("^LVDS")
+        and not name:match("^DSI") and not name:match("^HEADLESS") and not name:match("^FALLBACK") then
+        hl.exec_cmd(presentationCommand .. " " .. name)
+    end
+end)
+hl.on("hyprland.start", function() hl.exec_cmd(presentationCommand) end)
