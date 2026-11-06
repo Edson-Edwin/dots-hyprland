@@ -35,6 +35,15 @@ Use the **microphone in the top bar → Settings** to configure transcription an
 
 The horizontal top bar uses one black background with no group pills. On an existing installation, enable **Borderless** and **Show background** in the bar settings to use this style.
 
+## Make it your desktop
+
+- **Themes:** press Super+F6 to try a palette. Choose **Wallpaper colors** to follow your wallpaper again, or **Restore previous** to undo a change.
+- **Shortcuts and layout:** put your own bindings in `~/.config/hypr/custom/keybinds.lua` and appearance overrides in `~/.config/hypr/custom/general.lua`. For example, to change window rounding, add `hl.config({ decoration = { rounding = 8 } })` to your custom general file, then run `hyprctl reload`.
+- **Voice and chat:** each person supplies their own provider and API key through the microphone menu. Both features are optional.
+- **Displays:** the presentation shortcut detects the connected outputs. Your monitor names and saved profiles stay local.
+
+When sharing your own changes, stage the intended source files and review `git diff --cached`. Keep your local shell settings, keyring, clipboard database, display profiles, and diagnostic logs outside the repository.
+
 ## Where the changes live
 
 - `dots/.config/hypr/hyprland/edson.lua`: edition shortcuts and capture rules.
