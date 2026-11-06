@@ -91,8 +91,9 @@ def main():
         closed = subprocess.run(["pkill", "-TERM", "-u", str(os.getuid()), "-f", "^" + picker])
         if closed.returncode == 0:
             return 0
+        # A keyboard-invoked layer needs focus on map, before the shortcut is released.
         choice = subprocess.run(["/usr/bin/fuzzel", "--namespace=ii-theme-picker",
-                                 "--keyboard-focus=on-demand", "--dmenu", "--prompt", "Theme: ", "--width", "36",
+                                 "--keyboard-focus=exclusive", "--dmenu", "--prompt", "Theme: ", "--width", "36",
                                  "--lines", str(len(labels))], input="\n".join(labels), text=True, capture_output=True)
         if choice.returncode: return 0
         selected = choice.stdout.strip()
