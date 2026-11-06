@@ -35,6 +35,10 @@ Use the **microphone in the top bar → Settings** to configure transcription an
 
 The horizontal top bar uses one black background with no group pills. On an existing installation, enable **Borderless** and **Show background** in the bar settings to use this style.
 
+## Headset audio
+
+Connected Bluetooth headsets are preferred for playback and, when supported, microphone input. WirePlumber switches to the call profile when an app uses the headset mic and back to stereo playback afterwards. Leave your calling app’s input and output on **System Default**. USB devices and analog jacks use WirePlumber’s normal device and jack detection. To release a previously pinned audio output and input, run `wpctl clear-default 0 && wpctl clear-default 1`. No audio server restart is needed for routine connections.
+
 ## Make it your desktop
 
 - **Themes:** press Super+F6 to try a palette. Choose **Wallpaper colors** to follow your wallpaper again, or **Restore previous** to undo a change.

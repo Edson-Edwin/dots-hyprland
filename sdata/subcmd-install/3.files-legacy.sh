@@ -8,13 +8,15 @@
 case "${SKIP_MISCCONF}" in
   true) true;;
   *)
-    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'illogical-impulse' -exec basename {} \;); do
+    for i in $(find dots/.config/ -mindepth 1 -maxdepth 1 ! -name 'quickshell' ! -name 'fish' ! -name 'hypr' ! -name 'fontconfig' ! -name 'illogical-impulse' ! -name 'wireplumber' -exec basename {} \;); do
 #      i="dots/.config/$i"
       echo "[$0]: Found target: dots/.config/$i"
       if [ -d "dots/.config/$i" ];then install_dir__sync "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
       elif [ -f "dots/.config/$i" ];then install_file "dots/.config/$i" "$XDG_CONFIG_HOME/$i"
       fi
     done
+    # Add only our routing policy; preserve other WirePlumber settings.
+    rsync_dir__ignore_existing "dots/.config/wireplumber/wireplumber.conf.d" "$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d"
     # Seed the optional translation without replacing settings or existing translations.
     rsync_dir__ignore_existing "dots/.config/illogical-impulse/translations" "$XDG_CONFIG_HOME/illogical-impulse/translations"
     install_dir "dots/.local/share/konsole" "${XDG_DATA_HOME}"/konsole

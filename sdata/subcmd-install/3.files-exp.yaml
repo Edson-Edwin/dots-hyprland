@@ -19,6 +19,9 @@ patterns:
   - from: "dots/.config/illogical-impulse/translations"
     to: "$XDG_CONFIG_HOME/illogical-impulse/translations"
     mode: "soft"
+  - from: "dots/.config/wireplumber/wireplumber.conf.d"
+    to: "$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d"
+    mode: "soft"
   # Conditionally install these files
   - from: "dots/.config/fish"
     to: "$XDG_CONFIG_HOME/fish"
