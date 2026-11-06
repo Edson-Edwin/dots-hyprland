@@ -1,0 +1,8 @@
+[Unit]
+Description=Organize Downloads (%i)
+[Timer]
+OnCalendar=%i
+Persistent=true
+Unit=ii-downloads-organizer.service
+[Install]
+WantedBy=timers.target

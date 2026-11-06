@@ -1,0 +1,6 @@
+[Unit]
+Description=Organize loose files in Downloads by extension
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 "%E/quickshell/ii/scripts/downloads-organizer/organizer.py" scheduled
+Nice=10

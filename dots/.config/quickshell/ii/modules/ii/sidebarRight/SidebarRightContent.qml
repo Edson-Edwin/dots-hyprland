@@ -27,6 +27,7 @@ Item {
     property bool showAudioInputDialog: false
     property bool showBluetoothDialog: false
     property bool showNightLightDialog: false
+    property bool showDownloadsDialog: false
     property bool showWifiDialog: false
     property bool editMode: false
 
@@ -34,6 +35,7 @@ Item {
         target: GlobalStates
         function onSidebarRightOpenChanged() {
             if (!GlobalStates.sidebarRightOpen) {
+                root.showDownloadsDialog = false;
                 root.showWifiDialog = false;
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
@@ -72,13 +74,22 @@ Item {
                 Layout.bottomMargin: 0
             }
 
-            DialogButton {
+            RowLayout {
                 Layout.fillWidth: true
-                buttonText: Translation.tr("Themes") + "  ·  Super+F6"
-                onClicked: {
-                    GlobalStates.sidebarRightOpen = false;
-                    Quickshell.execDetached(["python3", FileUtils.trimFileProtocol(Directories.config)
-                        + "/hypr/hyprland/scripts/edson/ii-themes.py"]);
+                spacing: 4
+                DialogButton {
+                    Layout.fillWidth: true
+                    buttonText: Translation.tr("Themes") + "  ·  Super+F6"
+                    onClicked: {
+                        GlobalStates.sidebarRightOpen = false;
+                        Quickshell.execDetached(["python3", FileUtils.trimFileProtocol(Directories.config)
+                            + "/hypr/hyprland/scripts/edson/ii-themes.py"]);
+                    }
+                }
+                DialogButton {
+                    Layout.fillWidth: true
+                    buttonText: Translation.tr("Downloads")
+                    onClicked: root.showDownloadsDialog = true
                 }
             }
 
@@ -152,6 +163,11 @@ Item {
     ToggleDialog {
         shownPropertyString: "showNightLightDialog"
         dialog: NightLightDialog {}
+    }
+
+    ToggleDialog {
+        shownPropertyString: "showDownloadsDialog"
+        dialog: DownloadsDialog {}
     }
 
     ToggleDialog {

@@ -35,6 +35,12 @@ Use the **microphone in the top bar → Settings** to configure transcription an
 
 The horizontal top bar uses one black background with no group pills. On an existing installation, enable **Borderless** and **Show background** in the bar settings to use this style.
 
+## Downloads organizer
+
+Open **Super+N → Downloads**. **Organize now** moves loose regular files in your XDG Downloads directory into extension folders (for example, `pdf/`, `jpg/`, or `tar.gz/`). Files without an extension go into `No extension/`. Existing directories, hidden files, symlinks, and recognized partial downloads are left alone. A name collision gets a numbered suffix; nothing is overwritten.
+
+Automatic sorting starts off. Choose **Hourly**, **Daily** (midnight), or **Weekly** (Monday at midnight), in local time. A user systemd timer runs the same organizer and skips files modified in the last two minutes. Choose **Off** to stop future runs. Turning a schedule off does not undo earlier moves. No Downloads contents or scheduling state are stored in the repo.
+
 ## Headset audio
 
 Connected Bluetooth headsets are preferred for playback and, when supported, microphone input. WirePlumber switches to the call profile when an app uses the headset mic and back to stereo playback afterwards. Leave your calling app’s input and output on **System Default**. USB devices and analog jacks use WirePlumber’s normal device and jack detection. To release a previously pinned audio output and input, run `wpctl clear-default 0 && wpctl clear-default 1`. No audio server restart is needed for routine connections.
